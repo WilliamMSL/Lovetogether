@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
@@ -23,13 +24,16 @@ app.use('/api/toys', toyRoutes);
 app.use('/api/roleplay', roleplayRoutes);
 
 // Connexion à MongoDB Atlas
-mongoose.connect('mongodb+srv://Cluster98088:cmNmV0NITE5o@cluster98088.7q0ea.mongodb.net/LoveTogether?retryWrites=true&w=majority')
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
   .then(() => console.log('Connected to MongoDB Atlas'))
   .catch(err => console.error('Could not connect to MongoDB Atlas', err));
 
 // Créez un client Redis
 const redisClient = redis.createClient({
-  url: 'redis://localhost:6379'  // Utilisation de localhost puisque Redis est déjà en cours d'exécution
+  url: process.env.REDIS_URL
 });
 
 redisClient.on('connect', () => {
