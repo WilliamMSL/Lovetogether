@@ -13,6 +13,8 @@ import GrainEffect from './GrainEffect';
 import timerSound from '../sound/gong.mp3';
 import AddTruthOrDareModal from './AddTruthOrDareModal';
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:1812';
+
 const Container = styled.div`
   display: flex;
   flex-direction: column;
@@ -266,7 +268,7 @@ const ActionVerite = () => {
 
       console.log("Toys parameter for request:", toysParam);
 
-      const response = await axios.get(`http://localhost:1812/api/truthordare/random`, {
+      const response = await axios.get(`${API_BASE_URL}/api/truthordare/random`, {
         params: { type: type, player: mappedPlayer, toys: toysParam.join(','), intensity: intensity }
       });
 

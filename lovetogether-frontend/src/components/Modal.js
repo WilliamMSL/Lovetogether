@@ -4,6 +4,10 @@ import { UserContext } from './UserContext';
 import { ReactComponent as PlusIcon } from '../images/assets/icons/plus.svg';
 import { ReactComponent as MinusIcon } from '../images/assets/icons/minus.svg';
 
+
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:1812';
+
+
 const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
@@ -172,7 +176,7 @@ const Modal = ({ isOpen, onClose, onSave }) => {
   useEffect(() => {
     const fetchToys = async () => {
       try {
-        const response = await fetch('http://localhost:1812/api/toys');
+        const response = await fetch('${API_BASE_URL}/api/toys');
         const toys = await response.json();
 
         const groupedToys = toys.reduce((acc, toy) => {
