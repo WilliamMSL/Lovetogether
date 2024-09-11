@@ -14,6 +14,7 @@ import timerSound from '../sound/gong.mp3';
 import AddTruthOrDareModal from './AddTruthOrDareModal';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:1812';
+console.log('API Base URL:', API_BASE_URL);
 
 const Container = styled.div`
   display: flex;
@@ -268,8 +269,9 @@ const ActionVerite = () => {
 
       console.log("Toys parameter for request:", toysParam);
 
+      console.log('Fetching from:', `${API_BASE_URL}/api/truthordare/random`);
       const response = await axios.get(`${API_BASE_URL}/api/truthordare/random`, {
-        params: { type: type, player: mappedPlayer, toys: toysParam.join(','), intensity: intensity }
+        params: { type, player, toys: selectedToys.join(','), intensity }
       });
 
       console.log('Full API Response:', response.data);
