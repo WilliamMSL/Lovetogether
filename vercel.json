@@ -6,7 +6,7 @@
       "use": "@vercel/static-build",
       "config": { "distDir": "build" }
     },
-    { "src": "lovetogether-backend/api/**/*.js", "use": "@vercel/node" }
+    { "src": "lovetogether-backend/routes/**/*.js", "use": "@vercel/node" }
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "lovetogether-backend/api/$1" },
