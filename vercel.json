@@ -4,14 +4,24 @@
     { 
       "src": "lovetogether-frontend/package.json",
       "use": "@vercel/static-build",
-      "config": { "distDir": "build" }
+      "config": { 
+        "distDir": "build",
+        "buildCommand": "cd lovetogether-frontend && npm install && npm run build"
+      }
     },
-    { "src": "lovetogether-backend/routes/**/*.js", "use": "@vercel/node" }
+    { 
+      "src": "lovetogether-backend/index.js",
+      "use": "@vercel/node"
+    }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "lovetogether-backend/api/$1" },
-    { "src": "/(.*)", "dest": "lovetogether-frontend/$1" }
-  ],
-  "buildCommand": "npm run build",
-  "installCommand": "npm install"
+    { 
+      "src": "/api/(.*)",
+      "dest": "lovetogether-backend/index.js"
+    },
+    { 
+      "src": "/(.*)",
+      "dest": "lovetogether-frontend/build/$1"
+    }
+  ]
 }
