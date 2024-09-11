@@ -23,31 +23,52 @@ app.use('/api/truthordare', truthOrDareRoutes);
 app.use('/api/toys', toyRoutes);
 app.use('/api/roleplay', roleplayRoutes);
 
-
 // Connexion à MongoDB Atlas
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('Connected to MongoDB Atlas'))
   .catch(err => console.error('Could not connect to MongoDB Atlas', err));
 
+// Middleware pour vérifier l'état de la connexion MongoDB
+app.use((req, res, next) => {
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(500).json({ error: 'Database connection is not ready' });
+  }
+  next();
+});
 
 // Créez un client Redis
 const redisClient = redis.createClient({
   url: process.env.REDIS_URL
 });
 
-redisClient.on('connect', () => {
-  console.log('Connected to Redis');
-});
+// Fonction pour initialiser Redis
+const initRedis = async () => {
+  try {
+    await redisClient.connect();
+    console.log('Connected to Redis');
+  } catch (err) {
+    console.error('Redis connection error:', err);
+  }
+};
 
-redisClient.on('error', (err) => {
-  console.error('Redis error:', err);
-});
-
-// Connectez-vous à Redis
-redisClient.connect().catch(console.error);
+// Initialiser Redis
+initRedis();
 
 // Rendez le client Redis disponible dans l'application
 app.set('redisClient', redisClient);
+
+// Gestion de la fermeture gracieuse
+process.on('SIGINT', async () => {
+  try {
+    await redisClient.quit();
+    await mongoose.connection.close();
+    console.log('Connections closed gracefully');
+    process.exit(0);
+  } catch (err) {
+    console.error('Error during graceful shutdown:', err);
+    process.exit(1);
+  }
+});
 
 // Démarrage du serveur
 const PORT = process.env.PORT || 1812;
