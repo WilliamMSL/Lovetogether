@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "lovetogether-frontend/package.json", "use": "@vercel/static-build" },
+    { "src": "lovetogether-backend/api/**/*.js", "use": "@vercel/node" }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "lovetogether-backend/api/$1" },
+    { "src": "/(.*)", "dest": "lovetogether-frontend/$1" }
+  ]
+}

@@ -21,12 +21,15 @@ router.get('/random', async (req, res) => {
     try {
         const playerActionsKey = `recent_actions:${player}:${type}`;
         const sharedActionsKey = `recent_actions:shared:${type}`;
+        const toyWeightsKey = `toy_weights:${player}`;
         
-        console.log('Checking Redis keys:', { playerActionsKey, sharedActionsKey });
+        console.log('Checking Redis keys:', { playerActionsKey, sharedActionsKey, toyWeightsKey });
         let playerActionIds = await redisClient.sMembers(playerActionsKey);
         let sharedActionIds = await redisClient.sMembers(sharedActionsKey);
+        let toyWeights = JSON.parse(await redisClient.get(toyWeightsKey)) || {};
         console.log('Player action IDs:', playerActionIds);
         console.log('Shared action IDs:', sharedActionIds);
+        console.log('Toy weights:', toyWeights);
         
         const allRecentActionIds = [...new Set([...playerActionIds, ...sharedActionIds])];
         console.log('All recent action IDs:', allRecentActionIds);
@@ -47,8 +50,25 @@ router.get('/random', async (req, res) => {
         
         const pipeline = [
             { $match: query },
-            { $addFields: { weight: { $rand: {} } } },
-            { $sort: { weight: 1 } },
+            { $addFields: {
+                toyWeight: {
+                    $cond: {
+                        if: { $eq: [type, 'dare'] },
+                        then: {
+                            $avg: {
+                                $map: {
+                                    input: '$toys',
+                                    as: 'toy',
+                                    in: { $ifNull: [{ $toDouble: { $getField: { field: { $toString: '$$toy' }, input: toyWeights } } }, 1] }
+                                }
+                            }
+                        },
+                        else: 1
+                    }
+                }
+            }},
+            { $addFields: { weightedRandom: { $multiply: [{ $rand: {} }, '$toyWeight'] } } },
+            { $sort: { weightedRandom: 1 } },
             { $limit: 50 }
         ];
 
@@ -82,7 +102,7 @@ router.get('/random', async (req, res) => {
             console.log('Selected document:', {
                 id: randomDocument._id,
                 template: randomDocument.template.substring(0, 30) + '...',
-                weight: randomDocument.weight
+                weight: randomDocument.weightedRandom
             });
             
             try {
@@ -97,6 +117,20 @@ router.get('/random', async (req, res) => {
                 await redisClient.expire(playerActionsKey, 1800);
                 await redisClient.expire(sharedActionsKey, 1800);
 
+                // Update toy weights
+                if (type === 'dare' && randomDocument.toys) {
+                    for (let toy of randomDocument.toys) {
+                        toyWeights[toy] = (toyWeights[toy] || 1) * 0.5;  // Reduce weight by half
+                    }
+                    for (let toy in toyWeights) {
+                        if (!randomDocument.toys.includes(toy)) {
+                            toyWeights[toy] = Math.min((toyWeights[toy] || 1) * 1.1, 1);  // Increase other weights, max 1
+                        }
+                    }
+                    await redisClient.set(toyWeightsKey, JSON.stringify(toyWeights));
+                    await redisClient.expire(toyWeightsKey, 3600);  // Expire after 1 hour
+                }
+
                 console.log('Redis operations completed');
             } catch (redisError) {
                 console.error('Redis operation failed:', redisError);
@@ -105,7 +139,8 @@ router.get('/random', async (req, res) => {
             const response = {
                 template: randomDocument.template,
                 duration: randomDocument.duration || null,
-                intensity: randomDocument.intensity || null
+                intensity: randomDocument.intensity || null,
+                toys: randomDocument.toys || []
             };
             console.log('Sending response:', response);
             res.json(response);
