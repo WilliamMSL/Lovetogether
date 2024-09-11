@@ -12,6 +12,6 @@
     { "src": "/api/(.*)", "dest": "lovetogether-backend/api/$1" },
     { "src": "/(.*)", "dest": "lovetogether-frontend/$1" }
   ],
-  "buildCommand": "cd lovetogether-frontend && npm run build",
-  "installCommand": "cd lovetogether-frontend && npm install"
+  "buildCommand": "npm run build",
+  "installCommand": "npm install"
 }
