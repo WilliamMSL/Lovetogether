@@ -9,14 +9,14 @@
       }
     },
     { 
-      "src": "lovetogether-backend/index.js",
+      "src": "../lovetogether-backend/index.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "lovetogether-backend/index.js"
+      "dest": "../lovetogether-backend/index.js"
     },
     {
       "src": "/(.*)",
