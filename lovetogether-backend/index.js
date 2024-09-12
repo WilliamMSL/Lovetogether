@@ -91,6 +91,11 @@ process.on('SIGINT', async () => {
   }
 });
 
+// test
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'API is working' });
+});
+
 // Démarrage du serveur
 const PORT = process.env.PORT || 1812;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
