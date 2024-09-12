@@ -5,8 +5,7 @@
       "src": "lovetogether-frontend/package.json",
       "use": "@vercel/static-build",
       "config": { 
-        "distDir": "build",
-        "buildCommand": "cd lovetogether-frontend && npm install && npm run build"
+        "distDir": "build"
       }
     },
     { 
@@ -15,11 +14,11 @@
     }
   ],
   "routes": [
-    { 
+    {
       "src": "/api/(.*)",
       "dest": "lovetogether-backend/index.js"
     },
-    { 
+    {
       "src": "/(.*)",
       "dest": "lovetogether-frontend/build/$1"
     }

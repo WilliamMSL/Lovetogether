@@ -11,10 +11,16 @@ const app = express();
 app.use(bodyParser.json());
 
 app.use(cors({
-  origin: 'https://lovetogether3-cyjhjdtyb-williammsls-projects.vercel.app',
+  origin: ['https://lovetogether3-cyjhjdtyb-williammsls-projects.vercel.app', 'https://lovetogether3.vercel.app'],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
 
 // Importation des routes
 const userRoutes = require('./routes/user');
@@ -61,6 +67,16 @@ initRedis();
 
 // Rendez le client Redis disponible dans l'application
 app.set('redisClient', redisClient);
+
+// Route de test API
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'API is working' });
+});
+
+// Catch-all route pour l'API
+app.use('/api/*', (req, res) => {
+  res.status(404).json({ message: 'API route not found' });
+});
 
 // Gestion de la fermeture gracieuse
 process.on('SIGINT', async () => {
