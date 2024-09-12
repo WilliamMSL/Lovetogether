@@ -45,20 +45,23 @@ router.get('/random', async (req, res) => {
             ]
         };
         if (type === 'dare') {
-            if (toys) query.toys = { $in: toys.split(',') };
+            if (toys) {
+                const toyArray = toys.split(',');
+                query.toys = { $in: [...toyArray, 'all'] };
+            }
             if (intensity) query.intensity = intensity;
         }
         console.log('Base query:', JSON.stringify(query));
         
         const pipeline = [
             { $match: query },
-            { $sample: { size: 50 } }  // Utilisation de $sample au lieu de $rand
+            { $sample: { size: 50 } }
         ];
 
         if (allRecentActionIds.length > 0) {
             pipeline.unshift({ $match: { _id: { $nin: allRecentActionIds.map(id => new mongoose.Types.ObjectId(id)) } } });
         }
-
+        
         console.log('Aggregation pipeline:', JSON.stringify(pipeline));
 
         let results = await TruthOrDare.aggregate(pipeline);

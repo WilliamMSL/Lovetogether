@@ -9,7 +9,13 @@ const app = express();
 
 // Middlewares
 app.use(bodyParser.json());
-app.use(cors());
+const cors = require('cors');
+
+app.use(cors({
+  origin: 'https://lovetogether3-cyjhjdtyb-williammsls-projects.vercel.app',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // Importation des routes
 const userRoutes = require('./routes/user');
