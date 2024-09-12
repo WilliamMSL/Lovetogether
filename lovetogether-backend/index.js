@@ -9,7 +9,6 @@ const app = express();
 
 // Middlewares
 app.use(bodyParser.json());
-const cors = require('cors');
 
 app.use(cors({
   origin: 'https://lovetogether3-cyjhjdtyb-williammsls-projects.vercel.app',
