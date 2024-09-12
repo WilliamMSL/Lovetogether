@@ -12,18 +12,22 @@ function shuffleArray(array) {
 }
 
 router.get('/random', async (req, res) => {
+    console.log('\n--- New Request to /random ---');
+    console.log('Request headers:', req.headers);
     const { type, player, toys, intensity } = req.query;
     const redisClient = req.app.get('redisClient');
 
-    console.log('\n--- New Request ---');
     console.log('Request params:', { type, player, toys, intensity });
 
     // Validation des entrées
     if (!type || !player) {
+        console.log('Bad request: Missing type or player');
         return res.status(400).json({ message: 'Type et player sont requis' });
     }
 
     try {
+        console.log('MongoDB connection state:', mongoose.connection.readyState);
+        
         const playerActionsKey = `recent_actions:${player}:${type}`;
         const sharedActionsKey = `recent_actions:shared:${type}`;
         
@@ -87,7 +91,10 @@ router.get('/random', async (req, res) => {
             const randomDocument = results[0];
             console.log('Selected document:', {
                 id: randomDocument._id,
-                template: randomDocument.template.substring(0, 30) + '...'
+                template: randomDocument.template.substring(0, 30) + '...',
+                player: randomDocument.player,
+                toys: randomDocument.toys,
+                intensity: randomDocument.intensity
             });
             
             try {
@@ -119,7 +126,7 @@ router.get('/random', async (req, res) => {
         }
     } catch (error) {
         console.error('Error in /random route:', error);
-        res.status(500).json({ message: 'Erreur interne du serveur', error: error.message });
+        res.status(500).json({ message: 'Erreur interne du serveur', error: error.message, stack: error.stack });
     }
 });
 
