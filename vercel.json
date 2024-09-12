@@ -2,25 +2,25 @@
   "version": 2,
   "builds": [
     { 
-      "src": "lovetogether-frontend/package.json",
+      "src": "package.json",
       "use": "@vercel/static-build",
       "config": { 
         "distDir": "build"
       }
     },
     { 
-      "src": "lovetogether-backend/index.js",
+      "src": "../lovetogether-backend/index.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/lovetogether-backend/index.js"
+      "dest": "../lovetogether-backend/index.js"
     },
     {
       "src": "/(.*)",
-      "dest": "/lovetogether-frontend/build/$1"
+      "dest": "build/$1"
     }
   ]
 }
