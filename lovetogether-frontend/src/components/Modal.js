@@ -6,6 +6,7 @@ import { ReactComponent as MinusIcon } from '../images/assets/icons/minus.svg';
 
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:1812';
+console.log('API Base URL:', API_BASE_URL);
 
 
 const ModalOverlay = styled.div`
@@ -155,7 +156,6 @@ const Modal = ({ isOpen, onClose, onSave }) => {
   const { firstName1, firstName2, selectedToys, updateUserPreferences } = useContext(UserContext);
 
   const [toysByCategory, setToysByCategory] = useState({});
-
   const [tempFormState, setTempFormState] = useState(() => ({
     firstName1: localStorage.getItem('firstName1') || firstName1 || '',
     firstName2: localStorage.getItem('firstName2') || firstName2 || '',
@@ -176,8 +176,12 @@ const Modal = ({ isOpen, onClose, onSave }) => {
   useEffect(() => {
     const fetchToys = async () => {
       try {
-        const response = await fetch('${API_BASE_URL}/api/toys');
+        const response = await fetch(`${API_BASE_URL}/api/toys`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const toys = await response.json();
+        console.log('Fetched toys:', toys);
 
         const groupedToys = toys.reduce((acc, toy) => {
           const category = toy.category || 'Uncategorized';
@@ -190,15 +194,18 @@ const Modal = ({ isOpen, onClose, onSave }) => {
 
         setToysByCategory(groupedToys);
 
-        setTempFormState(prev => ({
-          ...prev,
-          selectedCategories: Object.keys(groupedToys),
-          toysByCategoryState: Object.keys(groupedToys).reduce((acc, category) => {
-            acc[category] = [];
-            return acc;
-          }, {}),
-          selectedToys: prev.selectedToys
-        }));
+        setTempFormState(prev => {
+          const updatedState = {
+            ...prev,
+            selectedCategories: Object.keys(groupedToys),
+            toysByCategoryState: Object.keys(groupedToys).reduce((acc, category) => {
+              acc[category] = prev.toysByCategoryState[category] || [];
+              return acc;
+            }, {}),
+          };
+          console.log('Updated tempFormState:', updatedState);
+          return updatedState;
+        });
 
       } catch (error) {
         console.error('Error fetching toys:', error);
@@ -218,18 +225,24 @@ const Modal = ({ isOpen, onClose, onSave }) => {
   const toggleCategorySelection = (category) => {
     setTempFormState((prev) => {
       const isSelected = prev.selectedCategories.includes(category);
-
       const updatedCategories = isSelected
         ? prev.selectedCategories.filter(c => c !== category)
         : [...prev.selectedCategories, category];
 
+      const updatedToysByCategoryState = {
+        ...prev.toysByCategoryState,
+        [category]: isSelected ? [] : (prev.toysByCategoryState[category] || []),
+      };
+
+      const updatedSelectedToys = isSelected
+        ? prev.selectedToys.filter(toyId => !toysByCategory[category].some(toy => toy.name_id === toyId))
+        : [...new Set([...prev.selectedToys, ...updatedToysByCategoryState[category]])];
+
       return {
         ...prev,
         selectedCategories: updatedCategories,
-        toysByCategoryState: {
-          ...prev.toysByCategoryState,
-          [category]: isSelected ? [] : prev.toysByCategoryState[category],
-        },
+        toysByCategoryState: updatedToysByCategoryState,
+        selectedToys: updatedSelectedToys,
       };
     });
   };
@@ -248,15 +261,17 @@ const Modal = ({ isOpen, onClose, onSave }) => {
         ? prev.selectedToys.filter(t => t !== toyNameId)
         : [...prev.selectedToys, toyNameId];
 
+      const updatedToysByCategoryState = {
+        ...prev.toysByCategoryState,
+        [toyCategory]: prev.toysByCategoryState[toyCategory].includes(toyNameId)
+          ? prev.toysByCategoryState[toyCategory].filter(t => t !== toyNameId)
+          : [...prev.toysByCategoryState[toyCategory], toyNameId],
+      };
+
       return {
         ...prev,
         selectedToys: updatedSelectedToys,
-        toysByCategoryState: {
-          ...prev.toysByCategoryState,
-          [toyCategory]: prev.toysByCategoryState[toyCategory].includes(toyNameId)
-            ? prev.toysByCategoryState[toyCategory].filter(t => t !== toyNameId)
-            : [...prev.toysByCategoryState[toyCategory], toyNameId],
-        },
+        toysByCategoryState: updatedToysByCategoryState,
       };
     });
   };
@@ -272,6 +287,7 @@ const Modal = ({ isOpen, onClose, onSave }) => {
     onSave(tempFormState);
     onClose();
   };
+
 
   if (!isOpen) return null;
 

@@ -266,30 +266,31 @@ const ActionVerite = () => {
       const mappedPlayer = player === firstName1 ? 'firstName1' : 'firstName2';
       const otherPlayer = player === firstName1 ? firstName2 : firstName1;
       const toysParam = selectedToys?.length ? [...selectedToys, 'all'] : ['all'];
-
+  
       console.log("Toys parameter for request:", toysParam);
-
       console.log('Fetching from:', `${API_BASE_URL}/api/truthordare/random`);
+      console.log('Request params:', { type, player: mappedPlayer, toys: toysParam.join(','), intensity });
+  
       const response = await axios.get(`${API_BASE_URL}/api/truthordare/random`, {
-        params: { type, player, toys: selectedToys.join(','), intensity }
+        params: { type, player: mappedPlayer, toys: toysParam.join(','), intensity }
       });
-
+  
       console.log('Full API Response:', response.data);
-
+  
       if (response.data && response.data.template) {
         let { template, duration, toys } = response.data;
         setDuration(duration || null);
         setRemainingTime(duration);
         setCurrentToys(toys || []);
-
+  
         template = template.charAt(0).toLowerCase() + template.slice(1);
-        template = template.replace('{Currentplayer}', player)
-                           .replace('{AutrePlayer}', otherPlayer);
-
+        template = template.replace(/{Currentplayer}/gi, player)
+                           .replace(/{AutrePlayer}/gi, otherPlayer);
+  
         return template;
       } else {
         console.error('Unexpected API response format:', response.data);
-        return 'Une erreur s\'est produite lors du chargement de la question/du défi.';
+        throw new Error('Réponse API inattendue');
       }
     } catch (error) {
       console.error('Error fetching action or truth:', error);
@@ -302,7 +303,7 @@ const ActionVerite = () => {
       } else {
         console.error('Error message:', error.message);
       }
-      return 'Une erreur s\'est produite. Veuillez réessayer.';
+      throw error; // Relance l'erreur pour la gérer dans handleCardClick
     }
   };
 

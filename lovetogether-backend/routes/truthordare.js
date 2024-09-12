@@ -18,6 +18,11 @@ router.get('/random', async (req, res) => {
     console.log('\n--- New Request ---');
     console.log('Request params:', { type, player, toys, intensity });
 
+    // Validation des entrées
+    if (!type || !player) {
+        return res.status(400).json({ message: 'Type et player sont requis' });
+    }
+
     try {
         const playerActionsKey = `recent_actions:${player}:${type}`;
         const sharedActionsKey = `recent_actions:shared:${type}`;
@@ -47,9 +52,7 @@ router.get('/random', async (req, res) => {
         
         const pipeline = [
             { $match: query },
-            { $addFields: { weight: { $rand: {} } } },
-            { $sort: { weight: 1 } },
-            { $limit: 50 }
+            { $sample: { size: 50 } }  // Utilisation de $sample au lieu de $rand
         ];
 
         if (allRecentActionIds.length > 0) {
@@ -81,17 +84,14 @@ router.get('/random', async (req, res) => {
             const randomDocument = results[0];
             console.log('Selected document:', {
                 id: randomDocument._id,
-                template: randomDocument.template.substring(0, 30) + '...',
-                weight: randomDocument.weight
+                template: randomDocument.template.substring(0, 30) + '...'
             });
             
             try {
-                const playerAddResult = await redisClient.sAdd(playerActionsKey, randomDocument._id.toString());
-                console.log('Redis player sAdd result:', playerAddResult);
+                await redisClient.sAdd(playerActionsKey, randomDocument._id.toString());
                 
-                if (randomDocument.player.includes('all') || randomDocument.player.length > 1) {
-                    const sharedAddResult = await redisClient.sAdd(sharedActionsKey, randomDocument._id.toString());
-                    console.log('Redis shared sAdd result:', sharedAddResult);
+                if (randomDocument.player === 'all' || (Array.isArray(randomDocument.player) && randomDocument.player.includes('all'))) {
+                    await redisClient.sAdd(sharedActionsKey, randomDocument._id.toString());
                 }
                 
                 await redisClient.expire(playerActionsKey, 1800);
@@ -100,6 +100,7 @@ router.get('/random', async (req, res) => {
                 console.log('Redis operations completed');
             } catch (redisError) {
                 console.error('Redis operation failed:', redisError);
+                // Continue even if Redis fails
             }
             
             const response = {
@@ -111,11 +112,11 @@ router.get('/random', async (req, res) => {
             res.json(response);
         } else {
             console.log('No results found even after resetting recent actions. This should not happen unless the database is empty.');
-            res.status(500).json({ message: 'Erreur inattendue: aucune action ou vérité disponible.' });
+            res.status(404).json({ message: 'Aucune action ou vérité disponible.' });
         }
     } catch (error) {
         console.error('Error in /random route:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Erreur interne du serveur', error: error.message });
     }
 });
 
