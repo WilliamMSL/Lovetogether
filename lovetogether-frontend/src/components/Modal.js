@@ -4,11 +4,11 @@ import { UserContext } from './UserContext';
 import { ReactComponent as PlusIcon } from '../images/assets/icons/plus.svg';
 import { ReactComponent as MinusIcon } from '../images/assets/icons/minus.svg';
 
-
+// Définir l'URL de base de l'API
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:1812';
 console.log('API Base URL:', API_BASE_URL);
 
-
+// Styled components pour les éléments de l'interface utilisateur
 const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
@@ -287,7 +287,6 @@ const Modal = ({ isOpen, onClose, onSave }) => {
     onSave(tempFormState);
     onClose();
   };
-
 
   if (!isOpen) return null;
 

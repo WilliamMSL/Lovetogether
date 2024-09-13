@@ -2,7 +2,6 @@ if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config();
 }
 
-require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -31,8 +30,7 @@ const allowedOrigins = [
   'https://lovetogether3.vercel.app', // Votre domaine principal en production
   'http://localhost:3000', 
   'http://192.168.0.23:3000',
-  'http://localhost:*' ,
-  'http://localhost:3001'  ,           // Pour le développement local
+  'http://localhost:3001'  // Pour le développement local
 ];
 
 // Expression régulière pour correspondre aux prévisualisations de déploiement Vercel
@@ -42,18 +40,16 @@ const corsOptions = {
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
 
-    if (
-      allowedOrigins.includes(origin) ||
-      vercelPreviewURL.test(origin)
-    ) {
+    if (allowedOrigins.includes(origin) || vercelPreviewURL.test(origin)) {
       callback(null, true);
     } else {
       logger.warn(`Origine non autorisée : ${origin}`);
       callback(new Error('L\'origine n\'est pas autorisée par la politique CORS'));
     }
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true, // Autoriser les credentials si nécessaire
 };
 
 app.use(cors(corsOptions));
@@ -83,6 +79,12 @@ app.use('/api/roleplay', roleplayRoutes);
 // Fonction d'initialisation du serveur
 (async () => {
   try {
+    // Vérifiez que MONGODB_URI est défini
+    if (!process.env.MONGODB_URI) {
+      logger.error('MONGODB_URI n\'est pas défini dans les variables d\'environnement.');
+      process.exit(1); // Quitter l'application si MONGODB_URI n'est pas défini
+    }
+
     // Connexion à MongoDB Atlas
     logger.info('Connexion à MongoDB Atlas...');
     await mongoose.connect(process.env.MONGODB_URI, {
@@ -138,7 +140,6 @@ app.use('/api/roleplay', roleplayRoutes);
       res.status(statusCode).json({
         message: err.message,
         ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
-        
       });
     });
 
