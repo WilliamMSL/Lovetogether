@@ -5,22 +5,22 @@
       "src": "package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "lovetogether-frontend/build"
+        "distDir": "build"  
       }
     },
     {
-      "src": "lovetogether-backend/index.js",
+      "src": "api/index.js",  
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "lovetogether-backend/index.js"
+      "dest": "api/index.js"  
     },
     {
       "src": "/(.*)",
-      "dest": "lovetogether-frontend/build/$1"
+      "dest": "/build/$1"  
     }
   ]
 }

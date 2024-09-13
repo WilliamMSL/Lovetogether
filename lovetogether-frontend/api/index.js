@@ -1,3 +1,7 @@
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
+}
+
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
@@ -25,7 +29,10 @@ app.use(express.json());
 // **Configuration CORS mise à jour**
 const allowedOrigins = [
   'https://lovetogether3.vercel.app', // Votre domaine principal en production
-  'http://localhost:3000',            // Pour le développement local
+  'http://localhost:3000', 
+  'http://192.168.0.23:3000',
+  'http://localhost:*' ,
+  'http://localhost:3001'  ,           // Pour le développement local
 ];
 
 // Expression régulière pour correspondre aux prévisualisations de déploiement Vercel
@@ -131,6 +138,7 @@ app.use('/api/roleplay', roleplayRoutes);
       res.status(statusCode).json({
         message: err.message,
         ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+        
       });
     });
 
