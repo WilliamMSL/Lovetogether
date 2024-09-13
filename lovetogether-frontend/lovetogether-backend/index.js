@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors'); // Importation du module cors
+const cors = require('cors');
 const redis = require('redis');
 const winston = require('winston');
 
@@ -22,7 +22,7 @@ const app = express();
 // Middlewares
 app.use(express.json());
 
-// Configuration CORS
+// **Configuration CORS mise à jour**
 const allowedOrigins = [
   'https://lovetogether3.vercel.app', // Votre domaine principal en production
   'http://localhost:3000',            // Pour le développement local
@@ -33,14 +33,15 @@ const vercelPreviewURL = /^https:\/\/lovetogether3-.*\.vercel\.app$/;
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin) return callback(null, true); // Autoriser les requêtes sans origine
+    if (!origin) return callback(null, true);
 
     if (
       allowedOrigins.includes(origin) ||
-      vercelPreviewURL.test(origin)    // Vérifie si l'origine correspond à l'expression régulière
+      vercelPreviewURL.test(origin)
     ) {
       callback(null, true);
     } else {
+      logger.warn(`Origine non autorisée : ${origin}`);
       callback(new Error('L\'origine n\'est pas autorisée par la politique CORS'));
     }
   },
@@ -48,7 +49,7 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
-app.use(cors(corsOptions)); // Application du middleware CORS
+app.use(cors(corsOptions));
 
 // Middleware de journalisation des requêtes
 app.use((req, res, next) => {
