@@ -1,12 +1,17 @@
 if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config();
 }
+
 const cors = require('cors');
 const express = require('express');
 const mongoose = require('mongoose');
 const redis = require('redis');
 const winston = require('winston');
 
+// Initialisation de l'application Express
+const app = express();
+
+// Configuration du middleware CORS
 const corsOptions = {
   origin: '*', // Autorise toutes les origines
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Méthodes HTTP autorisées
@@ -14,7 +19,7 @@ const corsOptions = {
   credentials: true, // Autoriser les credentials si nécessaire
 };
 
-app.use(cors(corsOptions));
+app.use(cors(corsOptions)); // Utilisez CORS avec les options définies
 
 // Configuration du logger
 const logger = winston.createLogger({
@@ -28,12 +33,8 @@ const logger = winston.createLogger({
 
 logger.info('Démarrage de l\'initialisation du serveur...');
 
-const app = express();
-
 // Middlewares
 app.use(express.json());
-
-
 
 // Middleware de journalisation des requêtes
 app.use((req, res, next) => {
