@@ -110,14 +110,12 @@ const MainContent = ({ backgroundColor, setBackgroundColor }) => {
   const [cardsOpacity, setCardsOpacity] = useState(0); // Initial opacity set to 0 for animation
   const [isAnimated, setIsAnimated] = useState(false); // Animation state
   const [cardsClickable, setCardsClickable] = useState(false); // Initial clickability off
-  const [animateLogo, setAnimateLogo] = useState(false); // Control for logo animation
   const cardsRef = useRef(null);
   const overlayRef = useRef(null);
   const buttonRef = useRef(null);
   const logoRef = useRef(null); // Ref to control logo directly
 
   const handleEnter = () => {
-    setAnimateLogo(true);
 
     // Animate the logo size and position increase
     gsap.to(logoRef.current, {

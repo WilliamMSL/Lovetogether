@@ -203,7 +203,7 @@ const TimerRectangle = styled.div`
   background-color: rgba(255, 69, 0, 0.5);
   z-index: 2;
 `;
-
+/*
 const AddButton = styled(Button)`
   background-color: #4CAF50;
   color: white;
@@ -212,7 +212,7 @@ const AddButton = styled(Button)`
     background-color: #45a049;
   }
 `;
-
+*/
 const ToyChip = styled.span`
   background-color: #f0f0f0;
   border-radius: 16px;
@@ -394,6 +394,7 @@ const ActionVerite = () => {
   const handleModalSave = (formState) => {
     setShowSetupModal(false);
   };
+
 
   const resetCards = () => {
     console.log('Resetting cards');
@@ -618,9 +619,6 @@ const ActionVerite = () => {
             <Button onClick={changeIntensity}>
               Intensité ｜ {intensity === 'low' ? '👀  Warm-up' : intensity === 'medium' ? '🔥 Foreplay' : "🔞  The Main Event"}
             </Button>
-            <AddButton onClick={() => setIsAddModalOpen(true)}>
-              Ajouter
-            </AddButton>
           </ButtonGroup>
         )}
 
