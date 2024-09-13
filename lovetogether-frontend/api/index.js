@@ -25,30 +25,12 @@ const app = express();
 // Middlewares
 app.use(express.json());
 
-// **Configuration CORS mise à jour**
-const allowedOrigins = [
-  'https://lovetogether3.vercel.app', // Votre domaine principal en production
-  'http://localhost:3000', 
-  'http://192.168.0.23:3000',
-  'http://localhost:3001'  // Pour le développement local
-];
-
-// Expression régulière pour correspondre aux prévisualisations de déploiement Vercel
-const vercelPreviewURL = /^https:\/\/lovetogether3-.*\.vercel\.app$/;
+const cors = require('cors');
 
 const corsOptions = {
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.includes(origin) || vercelPreviewURL.test(origin)) {
-      callback(null, true);
-    } else {
-      logger.warn(`Origine non autorisée : ${origin}`);
-      callback(new Error('L\'origine n\'est pas autorisée par la politique CORS'));
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  origin: '*', // Autorise toutes les origines
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Méthodes HTTP autorisées
+  allowedHeaders: ['Content-Type', 'Authorization'], // En-têtes autorisés
   credentials: true, // Autoriser les credentials si nécessaire
 };
 
