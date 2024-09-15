@@ -242,7 +242,7 @@ const MainContent = () => {
       <WhiteOverlay ref={overlayRef} />
       <OverlayContainer>
         <ButtonContainer ref={buttonRef}>
-          <Button onClick={handleEnter}>Entrer</Button>
+          <Button onClick={handleEnter}>Bienvenue</Button>
         </ButtonContainer>
       </OverlayContainer>
 
