@@ -1,9 +1,14 @@
 const mongoose = require('mongoose');
 
 const roleplaySchema = new mongoose.Schema({
-  id: Number,
-  title: String,
-  description: String
+  title: {
+    type: String,
+    required: true
+  },
+  description: {
+    type: String,
+    required: true
+  }
 });
 
 module.exports = mongoose.model('Roleplay', roleplaySchema);

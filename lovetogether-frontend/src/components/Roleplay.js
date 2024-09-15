@@ -1,13 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
-import backgroundImage from '../images/logo-5.svg'; // Mettez le bon chemin vers le SVG ici
+import backgroundImage from '../images/logo-5.svg';
 import GrainEffect from './GrainEffect';
-
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:1812';
 console.log('API Base URL:', API_BASE_URL);
-
 
 const PageContainer = styled.div`
   display: flex;
@@ -51,8 +49,6 @@ const Title = styled.h1`
   font-weight: 600;
   margin-bottom: 20px;
   text-transform: uppercase;
-
-
 `;
 
 const Content = styled.p`
@@ -74,7 +70,6 @@ const Footer = styled.div`
   font-weight: 400;
   color: #000000;
   margin-top: 20px;
-
 `;
 
 const ButtonContainer = styled.div`
@@ -119,22 +114,40 @@ const SpinnerContainer = styled.div`
   width: 100vw;
 `;
 
+const ErrorMessage = styled.div`
+  color: red;
+  margin-bottom: 20px;
+`;
+
 const Roleplay = () => {
   const [roleplay, setRoleplay] = useState(null);
+  const [error, setError] = useState(null);
 
   const fetchRandomRoleplay = async () => {
     try {
+      setError(null);
+      console.log('Fetching roleplay from:', `${API_BASE_URL}/api/roleplay/random`);
       const response = await axios.get(`${API_BASE_URL}/api/roleplay/random`);
+      console.log('Roleplay response:', response.data);
       setRoleplay(response.data);
     } catch (error) {
       console.error('Erreur lors de la récupération du roleplay:', error);
+      setError('Impossible de charger le roleplay. Veuillez réessayer.');
     }
   };
-  
 
   useEffect(() => {
-    fetchRandomRoleplay(); // Charger un roleplay aléatoire au chargement du composant
+    fetchRandomRoleplay();
   }, []);
+
+  if (error) {
+    return (
+      <PageContainer>
+        <ErrorMessage>{error}</ErrorMessage>
+        <Button onClick={fetchRandomRoleplay}>Réessayer</Button>
+      </PageContainer>
+    );
+  }
 
   if (!roleplay) {
     return (

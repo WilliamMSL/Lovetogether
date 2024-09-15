@@ -6,43 +6,64 @@ import { useCard } from './CardContext';
 import NavbarRight from './navbar/navbarright';
 import CardRenderer from './CardRenderer';
 import gsap from 'gsap';
-import Logo from './Logo'; // Utilisation de Logo ici
+import Logo from './Logo';
 import GrainEffect from './GrainEffect';
+
+// Import des images
+import whiteLogoSvg from '../images/logo-5.svg';
 
 const BackgroundContainer = styled.div`
   position: relative;
   width: 100%;
   height: 100vh;
   overflow: hidden;
-  background-color: ${({ bgColor }) => bgColor};
+  background-color: #FFFFFF;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: ${props => props.showBackgroundImage ? `url(${props.logoSrc})` : 'none'};
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    opacity: ${props => props.showBackgroundImage ? 0.5 : 0};
+    z-index: 1;
+    transition: opacity 0.5s ease;
+    pointer-events: none;
+  }
 `;
 
 const LogoStyled = styled(Logo)`
   position: absolute;
-  top: 0; /* Position initiale en haut */
+  top: 0;
   left: 50%;
-  transform: translateX(-50%); /* Centré horizontalement */
-  z-index: 10000011001; /* Z-index élevé pour s'assurer qu'il est au-dessus */
-  width: 10%; /* 10% width before animation */
-  height: auto; /* Ajustement automatique de la hauteur */
-  transition: z-index 0.5s ease; /* Transition pour le changement de z-index */
+  transform: translateX(-50%);
+  z-index: 1000;
+  width: 10%;
+  height: auto;
+  transition: z-index 0.5s ease;
 `;
 
 const StaticLogo = styled.div`
-  width: 100%; /* Set width to 100% to adapt to parent container */
+  width: 100%;
   height: auto;
-  border: 2px solid black; /* Ajout d'une bordure pour visualiser la div du logo */
+  border: 2px solid black;
   display: flex;
   justify-content: center;
   align-items: center;
 `;
 
 const CardsContainer = styled.div`
+  position: relative;
   opacity: ${({ opacity }) => opacity};
   transform: translateY(${({ isAnimated }) => (isAnimated ? '0' : '50px')});
   transition: ${({ isAnimated }) => (isAnimated ? 'transform 0.8s ease, opacity 0.8s ease' : 'none')};
   pointer-events: ${({ clickable }) => (clickable ? 'auto' : 'none')};
-  z-index: 20;
+  z-index: 1000;
 `;
 
 const GrainContainer = styled.div`
@@ -63,23 +84,23 @@ const OverlayContainer = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 100000003;
+  z-index: 10000000000000;
   pointer-events: none;
 `;
 
 const ButtonContainer = styled.div`
   position: absolute;
-  top: 70%; /* Position initiale du bouton */
+  top: 70%;
   pointer-events: auto;
-  z-index: 10000011002; /* Juste au-dessus du logo */
+  z-index: 2000;
 `;
 
 const Button = styled.button`
-  width: 100%; /* Prend toute la largeur */
-  max-width: 200px; /* Limite la largeur maximale du bouton */
+  width: 100%;
+  max-width: 200px;
   padding: 10px;
   font-size: 16px;
-  color: #000; /* Correction de la couleur du texte */
+  color: #000;
   border: none;
   border-radius: 5px;
   cursor: pointer;
@@ -91,8 +112,7 @@ const WhiteOverlay = styled.div`
   left: 0;
   width: 100%;
   height: 100vh;
-  background-color: white;
-  z-index: 100000002;
+  z-index: 1500;
   pointer-events: none;
   opacity: 1;
   transition: opacity 1s ease;
@@ -102,36 +122,34 @@ const ImageContainer = styled.div`
   position: absolute;
   bottom: 20px;
   left: 20px;
-  z-index: 100000; /* Pour s'assurer qu'il est au-dessus des autres éléments */
+  z-index: 1000;
 `;
 
-const MainContent = ({ backgroundColor, setBackgroundColor }) => {
+const MainContent = () => {
   const { selectedCard, resetCards } = useCard();
-  const [cardsOpacity, setCardsOpacity] = useState(0); // Initial opacity set to 0 for animation
-  const [isAnimated, setIsAnimated] = useState(false); // Animation state
-  const [cardsClickable, setCardsClickable] = useState(false); // Initial clickability off
+  const [cardsOpacity, setCardsOpacity] = useState(0);
+  const [isAnimated, setIsAnimated] = useState(false);
+  const [cardsClickable, setCardsClickable] = useState(false);
+  const [logoSrc, setLogoSrc] = useState(whiteLogoSvg);
+  const [showBackgroundImage, setShowBackgroundImage] = useState(false);
   const cardsRef = useRef(null);
   const overlayRef = useRef(null);
   const buttonRef = useRef(null);
-  const logoRef = useRef(null); // Ref to control logo directly
+  const logoRef = useRef(null);
 
   const handleEnter = () => {
-
-    // Animate the logo size and position increase
     gsap.to(logoRef.current, {
       width: '150px',
       top: '100px',
       duration: 3,
       ease: 'power3.out',
       onComplete: () => {
-        // Once the animation is complete, change z-index to 0
         gsap.to(logoRef.current, {
-          duration: 0.5, // Adding a duration for the z-index change
+          duration: 0.5,
         });
       },
     });
 
-    // Animate the button position to top: 50px
     gsap.to(buttonRef.current, {
       duration: 1.5,
       ease: 'power2.in',
@@ -169,7 +187,8 @@ const MainContent = ({ backgroundColor, setBackgroundColor }) => {
   };
 
   const handleXIconClick = () => {
-    setBackgroundColor('#FFFFFF');
+    setLogoSrc(whiteLogoSvg);
+    setShowBackgroundImage(false);
     setTimeout(() => {
       resetCards();
       setIsAnimated(false);
@@ -182,13 +201,19 @@ const MainContent = ({ backgroundColor, setBackgroundColor }) => {
   };
 
   useEffect(() => {
-    if (!selectedCard) {
-      setBackgroundColor('#FFFFFF');
+    if (selectedCard) {
+      setShowBackgroundImage(false);
+    } else {
+      setLogoSrc(whiteLogoSvg);
+      setShowBackgroundImage(false);
     }
-  }, [selectedCard, setBackgroundColor]);
+  }, [selectedCard]);
 
   return (
-    <BackgroundContainer bgColor={backgroundColor}>
+    <BackgroundContainer 
+      logoSrc={logoSrc} 
+      showBackgroundImage={showBackgroundImage}
+    >
       <GrainContainer>
         <GrainEffect />
       </GrainContainer>
@@ -205,7 +230,10 @@ const MainContent = ({ backgroundColor, setBackgroundColor }) => {
           isAnimated={isAnimated}
           clickable={cardsClickable}
         >
-          <CardsWrapper setBackgroundColor={setBackgroundColor} />
+          <CardsWrapper 
+            setLogoSrc={setLogoSrc}
+            setShowBackgroundImage={setShowBackgroundImage}
+          />
         </CardsContainer>
       )}
 
@@ -218,7 +246,6 @@ const MainContent = ({ backgroundColor, setBackgroundColor }) => {
         </ButtonContainer>
       </OverlayContainer>
 
-      {/* Ajout du logo statique ici */}
       <ImageContainer>
         <StaticLogo>
           <Logo />
@@ -229,6 +256,3 @@ const MainContent = ({ backgroundColor, setBackgroundColor }) => {
 };
 
 export default MainContent;
-
-
-

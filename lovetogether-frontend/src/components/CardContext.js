@@ -26,8 +26,13 @@ export const CardProvider = ({ children }) => {
     setHasEntered(true); // Assure que CardsWrapper est visible
   };
 
+  // Fonction pour cacher toutes les cartes
+  const hideAllCards = () => {
+    setSelectedCard(null); // Cache toutes les cartes sans affecter hasEntered
+  };
+
   return (
-    <CardContext.Provider value={{ selectedCard, selectCard, resetCards, hasEntered }}>
+    <CardContext.Provider value={{ selectedCard, selectCard, resetCards, hideAllCards, hasEntered }}>
       {children}
     </CardContext.Provider>
   );

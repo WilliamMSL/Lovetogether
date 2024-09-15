@@ -1,90 +1,92 @@
 const express = require('express');
 const router = express.Router();
-const Toy = require('../models/Toys');
+const Roleplay = require('../models/Roleplay');
 
-// Créer un jouet
+// Créer un roleplay
 router.post('/', async (req, res) => {
-  const { name, name_id } = req.body;  // Assurez-vous que `name_id` est fourni
+  const { title, description } = req.body;
   
-  // Vérification des champs requis
-  if (!name || !name_id) {
-    return res.status(400).json({ message: 'Les champs "name" et "name_id" sont requis.' });
+  if (!title || !description) {
+    return res.status(400).json({ message: 'Les champs "title" et "description" sont requis.' });
   }
 
-  const toy = new Toy({ name, name_id });
+  const roleplay = new Roleplay({ title, description });
 
   try {
-    const savedToy = await toy.save();
-    res.status(201).json(savedToy);
+    const savedRoleplay = await roleplay.save();
+    res.status(201).json(savedRoleplay);
   } catch (err) {
-    console.error('Error saving toy:', err);
-    res.status(400).json({ message: 'Erreur lors de la sauvegarde du jouet.', error: err.message });
+    console.error('Error saving roleplay:', err);
+    res.status(400).json({ message: 'Erreur lors de la sauvegarde du roleplay.', error: err.message });
   }
 });
 
-// Récupérer tous les jouets
+// Récupérer tous les roleplays
 router.get('/', async (req, res) => {
   try {
-    const toys = await Toy.find();
-    res.json(toys);
+    const roleplays = await Roleplay.find();
+    res.json(roleplays);
   } catch (err) {
-    console.error('Error fetching toys:', err);
-    res.status(500).json({ message: 'Erreur lors de la récupération des jouets.', error: err.message });
+    console.error('Error fetching roleplays:', err);
+    res.status(500).json({ message: 'Erreur lors de la récupération des roleplays.', error: err.message });
   }
 });
 
-// Récupérer un jouet spécifique par `name_id`
-router.get('/:name_id', async (req, res) => {
+// Récupérer un roleplay aléatoire
+router.get('/random', async (req, res) => {
   try {
-    const toy = await Toy.findOne({ name_id: req.params.name_id }); // Recherche par `name_id`
-    if (!toy) {
-      return res.status(404).json({ message: 'Jouet non trouvé.' });
+    const count = await Roleplay.countDocuments();
+    const random = Math.floor(Math.random() * count);
+    const roleplay = await Roleplay.findOne().skip(random);
+    
+    if (!roleplay) {
+      return res.status(404).json({ message: 'Aucun roleplay trouvé.' });
     }
-    res.json(toy);
+    
+    res.json(roleplay);
   } catch (err) {
-    console.error('Error fetching toy by name_id:', err);
-    res.status(500).json({ message: 'Erreur lors de la récupération du jouet.', error: err.message });
+    console.error('Error fetching random roleplay:', err);
+    res.status(500).json({ message: 'Erreur lors de la récupération du roleplay aléatoire.', error: err.message });
   }
 });
 
-// Mettre à jour un jouet par `name_id`
-router.put('/:name_id', async (req, res) => {
-  const { name, name_id } = req.body;
+// Mettre à jour un roleplay
+router.put('/:id', async (req, res) => {
+  const { title, description } = req.body;
 
-  // Vérification des champs requis
-  if (!name || !name_id) {
-    return res.status(400).json({ message: 'Les champs "name" et "name_id" sont requis.' });
+  if (!title || !description) {
+    return res.status(400).json({ message: 'Les champs "title" et "description" sont requis.' });
   }
 
   try {
-    const toy = await Toy.findOneAndUpdate(
-      { name_id: req.params.name_id },
-      { name, name_id },
-      { new: true, runValidators: true } // Retourne le document mis à jour
+    const roleplay = await Roleplay.findByIdAndUpdate(
+      req.params.id,
+      { title, description },
+      { new: true, runValidators: true }
     );
 
-    if (!toy) {
-      return res.status(404).json({ message: 'Jouet non trouvé.' });
+    if (!roleplay) {
+      return res.status(404).json({ message: 'Roleplay non trouvé.' });
     }
 
-    res.json(toy);
+    res.json(roleplay);
   } catch (err) {
-    console.error('Error updating toy by name_id:', err);
-    res.status(400).json({ message: 'Erreur lors de la mise à jour du jouet.', error: err.message });
+    console.error('Error updating roleplay:', err);
+    res.status(400).json({ message: 'Erreur lors de la mise à jour du roleplay.', error: err.message });
   }
 });
 
-// Supprimer un jouet par `name_id`
-router.delete('/:name_id', async (req, res) => {
+// Supprimer un roleplay
+router.delete('/:id', async (req, res) => {
   try {
-    const toy = await Toy.findOneAndDelete({ name_id: req.params.name_id });
-    if (!toy) {
-      return res.status(404).json({ message: 'Jouet non trouvé.' });
+    const roleplay = await Roleplay.findByIdAndDelete(req.params.id);
+    if (!roleplay) {
+      return res.status(404).json({ message: 'Roleplay non trouvé.' });
     }
-    res.json({ message: 'Jouet supprimé avec succès.' });
+    res.json({ message: 'Roleplay supprimé avec succès.' });
   } catch (err) {
-    console.error('Error deleting toy by name_id:', err);
-    res.status(500).json({ message: 'Erreur lors de la suppression du jouet.', error: err.message });
+    console.error('Error deleting roleplay:', err);
+    res.status(500).json({ message: 'Erreur lors de la suppression du roleplay.', error: err.message });
   }
 });
 
