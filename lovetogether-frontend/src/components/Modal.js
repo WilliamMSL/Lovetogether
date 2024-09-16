@@ -19,7 +19,7 @@ const ModalOverlay = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 10000000000000000000000;
 `;
 
 const ModalContent = styled.div`
@@ -30,6 +30,14 @@ const ModalContent = styled.div`
   max-width: 800px;
   position: relative;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+
+  @media (max-width: 768px) {
+    height:80%;
+    overflow:none;
+    padding: 24px;
+    overflow: hidden;
+    overflow-y: scroll;
+  }
 `;
 
 const Button = styled.button`
@@ -82,7 +90,14 @@ const SectionTitle = styled.h2`
   margin-bottom: 32px;
   margin-right: 64px;
   line-height: 50px;
+
+  @media (max-width: 768px) {
+    font-size: 24px;
+    line-height: 30px;
+  }
+
 `;
+
 
 const SubTitle = styled.h3`
   font-size: 20px;

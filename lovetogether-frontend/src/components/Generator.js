@@ -71,6 +71,7 @@ const FrameContainer = styled.div`
 
   @media (max-width: 1000px) {
     width: 80%;
+    height: 60%;
   }
 `;
 

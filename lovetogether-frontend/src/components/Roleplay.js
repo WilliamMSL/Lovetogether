@@ -40,6 +40,8 @@ const Card = styled.div`
 
   @media (max-width: 500px) {
     width: 95%;
+    height: 60vh;
+    overflow-y: scroll;
   }
 `;
 

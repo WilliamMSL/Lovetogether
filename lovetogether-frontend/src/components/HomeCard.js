@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 
 const CardContainer = styled.div`
   width: 392px;
-  height: 548px;
+  height: ${props => props.isMobile ? '254px' : '548px'};
   background-image: url(${props => props.image});
   background-size: cover;
   background-position: center;
@@ -27,17 +27,28 @@ const CardWrapper = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-
 `;
 
 const HomeCard = ({ image, rotate, onMouseEnter, onMouseLeave, onClick }) => {
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 800);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 800);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleMouseMove = (e) => {
-    const rect = e.target.getBoundingClientRect();
-    const offsetX = (e.clientX - rect.left - rect.width / 10) / 20; 
-    const offsetY = (e.clientY - rect.top - rect.height / 10) / 20;
-    setPosition({ x: offsetX, y: offsetY });
+    if (!isMobile) {
+      const rect = e.target.getBoundingClientRect();
+      const offsetX = (e.clientX - rect.left - rect.width / 10) / 20; 
+      const offsetY = (e.clientY - rect.top - rect.height / 10) / 20;
+      setPosition({ x: offsetX, y: offsetY });
+    }
   };
 
   const handleMouseLeave = () => {
@@ -56,8 +67,9 @@ const HomeCard = ({ image, rotate, onMouseEnter, onMouseLeave, onClick }) => {
         onMouseEnter={onMouseEnter}
         onMouseLeave={handleMouseLeave}
         onClick={onClick}
+        isMobile={isMobile}
       >
-        {/* Vous pouvez ajouter du contenu ici */}
+        {/* Vous pouvez ajouter du contenu ici si nécessaire */}
       </CardContainer>
     </CardWrapper>
   );

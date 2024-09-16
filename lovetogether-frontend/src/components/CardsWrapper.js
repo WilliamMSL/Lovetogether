@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import HomeCard from './HomeCard';
 import { useCard } from './CardContext';
 import styled from 'styled-components';
@@ -12,6 +12,10 @@ import truthOrDareImage from '../images/TRUTHORDARE.png';
 import positionsImage from '../images/POSITIONS.png';
 import roleImage from '../images/ROLE.png';
 
+import truthOrDareImageMobile from '../images/TRUTHORDARE-mobile.png';
+import positionsImageMobile from '../images/POSITIONS-mobile.png';
+import roleImageMobile from '../images/ROLE-mobile.png';
+
 const CardsContainer = styled.div`
   display: flex;
   flex-direction: row;
@@ -24,19 +28,34 @@ const CardsContainer = styled.div`
   position: relative;
   z-index: 1000;
 
-  @media (max-width: 500px) {
-    transform: scale(0.8);
+  @media (max-width: 800px) {
     flex-direction: column;
+    transform: scale(0.9);
+    gap: 0px;
   }
 `;
 
 const StyledHomeCard = styled(HomeCard)`
   position: relative;
   z-index: 1001;
+  width: ${props => props.isMobile ? '392px' : '30vw'};
+  height: ${props => props.isMobile ? '254px' : '40vh'};
+  transform: ${props => `rotate(${props.rotate})`};
+  background-color: #FBF8F1;
 `;
 
 const CardsWrapper = ({ setLogoSrc, setShowBackgroundImage }) => {
   const { selectCard } = useCard();
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 800);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 800);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleCardClick = (card) => {
     selectCard(card);
@@ -51,46 +70,35 @@ const CardsWrapper = ({ setLogoSrc, setShowBackgroundImage }) => {
     setShowBackgroundImage(false);
   };
 
+  const getImage = (desktopImage, mobileImage) => {
+    return isMobile ? mobileImage : desktopImage;
+  };
+
   return (
     <CardsContainer>
       <StyledHomeCard
-        image={truthOrDareImage}
+        image={getImage(truthOrDareImage, truthOrDareImageMobile)}
         rotate="-5deg"
         onMouseEnter={() => handleMouseEnter(whiteLogoSvg)}
         onMouseLeave={handleMouseLeave}
         onClick={() => handleCardClick('ActionVerite')}
-        style={{
-          width: '30vw',
-          height: '40vh',
-          transform: 'rotate(-5deg)',
-          backgroundColor: '#FBF8F1',
-        }}
+        isMobile={isMobile}
       />
       <StyledHomeCard
-        image={positionsImage}
+        image={getImage(positionsImage, positionsImageMobile)}
         rotate="0deg"
         onMouseEnter={() => handleMouseEnter(whiteLogo10Svg)}
         onMouseLeave={handleMouseLeave}
         onClick={() => handleCardClick('Generator')}
-        style={{
-          width: '30vw',
-          height: '40vh',
-          transform: 'rotate(0deg)',
-          backgroundColor: '#FBF8F1',
-        }}
+        isMobile={isMobile}
       />
       <StyledHomeCard
-        image={roleImage}
+        image={getImage(roleImage, roleImageMobile)}
         rotate="5deg"
         onMouseEnter={() => handleMouseEnter(whiteLogo20Svg)}
         onMouseLeave={handleMouseLeave}
         onClick={() => handleCardClick('Roleplay')}
-        style={{
-          width: '30vw',
-          height: '40vh',
-          transform: 'rotate(5deg)',
-          backgroundColor: '#FBF8F1',
-        }}
+        isMobile={isMobile}
       />
     </CardsContainer>
   );

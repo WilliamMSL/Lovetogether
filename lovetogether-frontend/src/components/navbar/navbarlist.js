@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import Button from './navitem';
 import { ReactComponent as KeyIcon } from '../../images/assets/icons/key.svg';
 import { ReactComponent as HomeIcon } from '../../images/assets/icons/home.svg';
@@ -12,6 +12,19 @@ const NavbarLeft = () => {
   const { selectCard, hideAllCards } = useCard(); // Utilisation du contexte des cartes et ajout de la fonction hideAllCards
   const { firstName1, firstName2, updateUserPreferences } = useContext(UserContext); // Accès aux données utilisateur
   const [isModalOpen, setModalOpen] = useState(false); // État local pour contrôler la visibilité du modal
+  const [isVisible, setIsVisible] = useState(window.innerWidth > 650); // État pour contrôler la visibilité en fonction de la largeur de la fenêtre
+
+  // Effect to handle window resize and update visibility
+  useEffect(() => {
+    const handleResize = () => {
+      setIsVisible(window.innerWidth > 650);
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    // Cleanup listener on component unmount
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleActionClick = () => {
     if (!firstName1 || !firstName2) {
@@ -35,6 +48,11 @@ const NavbarLeft = () => {
     closeModal(); // Ferme le modal après enregistrement
     selectCard('ActionVerite'); // Sélection automatique de la carte 'ActionVerite'
   };
+
+  // Render nothing if isVisible is false (i.e., width >= 500px)
+  if (!isVisible) {
+    return null;
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', position: 'absolute', left: '48px', top: '48px', gap: '10px' }}>

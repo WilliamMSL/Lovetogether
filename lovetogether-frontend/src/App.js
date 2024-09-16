@@ -23,26 +23,8 @@ const SmallScreenMessage = styled.div`
 
 const App = () => {
   const [backgroundColor, setBackgroundColor] = useState('#FFFFFF');
-  const [isSmallScreen, setIsSmallScreen] = useState(false);
 
-  useEffect(() => {
-    const checkScreenSize = () => {
-      setIsSmallScreen(window.innerWidth < 500);
-    };
 
-    checkScreenSize();
-    window.addEventListener('resize', checkScreenSize);
-
-    return () => window.removeEventListener('resize', checkScreenSize);
-  }, []);
-
-  if (isSmallScreen) {
-    return (
-      <SmallScreenMessage>
-        Cette application n'est pas disponible sur les petits écrans.
-      </SmallScreenMessage>
-    );
-  }
 
   return (
     <CardProvider>
