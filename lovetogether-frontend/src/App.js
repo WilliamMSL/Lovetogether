@@ -6,6 +6,7 @@ import ActionVerite from './components/ActionVerite';
 import Roleplay from './components/Roleplay';
 import { CardProvider } from './components/CardContext';
 import styled from 'styled-components';
+import { SpeedInsights } from "@vercel/speed-insights/react"
 
 const SmallScreenMessage = styled.div`
   display: flex;
@@ -53,7 +54,9 @@ const App = () => {
           <Route path="/roleplay" element={<Roleplay />} />
         </Routes>
       </Router>
+      <SpeedInsights/>
     </CardProvider>
+    
   );
 };
 

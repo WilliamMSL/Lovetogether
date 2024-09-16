@@ -132,6 +132,7 @@ const MainContent = () => {
   const [cardsClickable, setCardsClickable] = useState(false);
   const [logoSrc, setLogoSrc] = useState(whiteLogoSvg);
   const [showBackgroundImage, setShowBackgroundImage] = useState(false);
+  const [showNavbar, setShowNavbar] = useState(false);
   const cardsRef = useRef(null);
   const overlayRef = useRef(null);
   const buttonRef = useRef(null);
@@ -169,6 +170,7 @@ const MainContent = () => {
         }
         setIsAnimated(true);
         setCardsOpacity(1);
+        setShowNavbar(true);
 
         if (cardsRef.current) {
           gsap.to(cardsRef.current, {
@@ -182,6 +184,14 @@ const MainContent = () => {
             },
           });
         }
+
+        gsap.from('.navbar', {
+          y: -50,
+          opacity: 0,
+          duration: 0.5,
+          ease: 'power2.out',
+          delay: 0.5
+        });
       },
     });
   };
@@ -220,8 +230,8 @@ const MainContent = () => {
 
       <LogoStyled ref={logoRef} />
 
-      <Navbar />
-      <NavbarRight onResetAnimation={handleXIconClick} />
+      {showNavbar && <Navbar className="navbar" />}
+      {showNavbar && <NavbarRight className="navbar" onResetAnimation={handleXIconClick} />}
 
       {!selectedCard && (
         <CardsContainer
@@ -242,7 +252,7 @@ const MainContent = () => {
       <WhiteOverlay ref={overlayRef} />
       <OverlayContainer>
         <ButtonContainer ref={buttonRef}>
-          <Button onClick={handleEnter}>Bienvenue</Button>
+          <Button onClick={handleEnter}>Entrer</Button>
         </ButtonContainer>
       </OverlayContainer>
 
