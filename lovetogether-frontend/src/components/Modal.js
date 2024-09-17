@@ -3,12 +3,13 @@ import styled from 'styled-components';
 import { UserContext } from './UserContext';
 import { ReactComponent as PlusIcon } from '../images/assets/icons/plus.svg';
 import { ReactComponent as MinusIcon } from '../images/assets/icons/minus.svg';
+import { ReactComponent as ChevronDownIcon } from '../images/assets/icons/chevron-down.svg';
 
 // Définir l'URL de base de l'API
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:1812';
 console.log('API Base URL:', API_BASE_URL);
 
-// Styled components pour les éléments de l'interface utilisateur
+// Styled components
 const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
@@ -32,11 +33,9 @@ const ModalContent = styled.div`
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 
   @media (max-width: 768px) {
-    height:80%;
-    overflow:none;
+    height: 80%;
     padding: 24px;
-    overflow: hidden;
-    overflow-y: scroll;
+    overflow-y: auto;
   }
 `;
 
@@ -95,15 +94,20 @@ const SectionTitle = styled.h2`
     font-size: 24px;
     line-height: 30px;
   }
-
 `;
-
 
 const SubTitle = styled.h3`
   font-size: 20px;
   font-weight: bold;
   color: #333;
-  margin-bottom: 16px;
+  margin-bottom: 0px;
+`;
+
+const SubTitleMargin = styled.h3`
+  font-size: 20px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 12px;
 `;
 
 const ChipsContainer = styled.div`
@@ -159,12 +163,106 @@ const SmallColumnContainer = styled.div`
   gap: 0px;
 `;
 
+const SmallColumnContainer2 = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+`;
+
 const InputField = styled.input`
   padding: 10px;
   margin-bottom: 8px;
   font-size: 16px;
   border: 1px solid #ccc;
   border-radius: 4px;
+`;
+
+const MobileAccordion = styled.div`
+  @media (min-width: 769px) {
+    display: none;
+  }
+`;
+
+const AccordionItem = styled.div`
+  border-bottom: 1px solid #e0e0e0;
+`;
+
+const AccordionHeader = styled.button`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 15px 0;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: bold;
+`;
+
+const AccordionContent = styled.div`
+  padding: 0 0 15px 0;
+  display: ${props => props.isOpen ? 'block' : 'none'};
+`;
+
+const MobileListItem = styled.div`
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+`;
+
+const Checkbox = styled.input`
+  margin-right: 10px;
+`;
+
+const Label = styled.label`
+  font-size: 16px;
+`;
+
+const DesktopChipsContainer = styled(ChipsContainer)`
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+const ChevronIcon = styled(ChevronDownIcon)`
+  width: 20px;
+  height: 20px;
+  transition: transform 0.3s ease;
+  transform: ${props => props.isOpen ? 'rotate(180deg)' : 'rotate(0)'};
+`;
+
+const MobileDeselectAllButton = styled(Button)`
+  display: none;
+  @media (max-width: 768px) {
+    display: flex;
+
+    align-items: center;
+    gap: 8px;
+    padding: 00px 0px;
+    background-color: white;
+    border: 1px solid rgba(0, 0, 0, 0);
+    border-radius: 12px;
+    color: black;
+    opacity:80%;
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    text:
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0);
+    transition: transform 0.3s ease, background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    width: fit-content;
+    text-decoration: underline;
+
+    &:hover {
+      background-color: white;
+      color: #000;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0);
+      border-color: white;
+    }
+  }
 `;
 
 const Modal = ({ isOpen, onClose, onSave }) => {
@@ -178,6 +276,7 @@ const Modal = ({ isOpen, onClose, onSave }) => {
     selectedCategories: JSON.parse(localStorage.getItem('selectedCategories')) || [],
     toysByCategoryState: JSON.parse(localStorage.getItem('toysByCategoryState')) || {},
   }));
+  const [openAccordions, setOpenAccordions] = useState({});
 
   useEffect(() => {
     setTempFormState(prev => ({
@@ -303,6 +402,59 @@ const Modal = ({ isOpen, onClose, onSave }) => {
     onClose();
   };
 
+  const toggleAccordion = (category) => {
+    setOpenAccordions(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }));
+  };
+
+  const deselectAllToys = () => {
+    setTempFormState(prev => ({
+      ...prev,
+      selectedToys: [],
+      toysByCategoryState: Object.keys(prev.toysByCategoryState).reduce((acc, category) => {
+        acc[category] = [];
+        return acc;
+      }, {}),
+    }));
+  };
+
+  const renderToySelection = (category) => {
+    if (window.innerWidth <= 768) {
+      return (
+        <AccordionContent isOpen={openAccordions[category]}>
+          {toysByCategory[category].map((toy, toyIndex) => (
+            <MobileListItem key={`toy-${category}-${toyIndex}`}>
+              <Checkbox
+                type="checkbox"
+                id={`toy-${toy.name_id}`}
+                checked={tempFormState.selectedToys.includes(toy.name_id)}
+                onChange={() => toggleToySelection(toy.name_id)}
+              />
+              <Label htmlFor={`toy-${toy.name_id}`}>{toy.name}</Label>
+            </MobileListItem>
+          ))}
+        </AccordionContent>
+      );
+    } else {
+      return toysByCategory[category].map((toy, toyIndex) => (
+        <ToyChip
+          key={`toy-${category}-${toyIndex}`}
+          isSelected={tempFormState.selectedToys.includes(toy.name_id)}
+          onClick={() => toggleToySelection(toy.name_id)}
+        >
+          {toy.name}
+          {tempFormState.selectedToys.includes(toy.name_id) ? (
+            <MinusIcon style={{ width: '16px', height: '16px' }} />
+          ) : (
+            <PlusIcon style={{ width: '16px', height: '16px' }} />
+          )}
+        </ToyChip>
+      ));
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -312,7 +464,7 @@ const Modal = ({ isOpen, onClose, onSave }) => {
         <SectionTitle>Personnaliser votre expérience</SectionTitle>
         <ColumnContainer>
           <SmallColumnContainer>
-            <SubTitle>À qui avons nous l'honneur ?</SubTitle>
+            <SubTitleMargin>À qui avons nous l'honneur ?</SubTitleMargin>
             <InputField
               type="text"
               name="firstName1"
@@ -330,7 +482,10 @@ const Modal = ({ isOpen, onClose, onSave }) => {
           </SmallColumnContainer>
           <SmallColumnContainer>
             <SubTitle>Qu'est ce qu'il y a au menu ?</SubTitle>
-            <ChipsContainer>
+            <MobileDeselectAllButton onClick={deselectAllToys}>
+              Tout désélectionner
+            </MobileDeselectAllButton>
+            <DesktopChipsContainer>
               {Object.keys(toysByCategory).map((category, index) => (
                 <React.Fragment key={index}>
                   <CategoryChip
@@ -340,24 +495,21 @@ const Modal = ({ isOpen, onClose, onSave }) => {
                     {category}
                   </CategoryChip>
 
-                  {tempFormState.selectedCategories.includes(category) &&
-                    toysByCategory[category].map((toy, toyIndex) => (
-                      <ToyChip
-                        key={`toy-${index}-${toyIndex}`}
-                        isSelected={tempFormState.selectedToys.includes(toy.name_id)}
-                        onClick={() => toggleToySelection(toy.name_id)}
-                      >
-                        {toy.name}
-                        {tempFormState.selectedToys.includes(toy.name_id) ? (
-                          <MinusIcon style={{ width: '16px', height: '16px' }} />
-                        ) : (
-                          <PlusIcon style={{ width: '16px', height: '16px' }} />
-                        )}
-                      </ToyChip>
-                    ))}
+                  {tempFormState.selectedCategories.includes(category) && renderToySelection(category)}
                 </React.Fragment>
               ))}
-            </ChipsContainer>
+            </DesktopChipsContainer>
+            <MobileAccordion>
+              {Object.keys(toysByCategory).map((category, index) => (
+                <AccordionItem key={index}>
+                  <AccordionHeader onClick={() => toggleAccordion(category)}>
+                    {category}
+                    <ChevronIcon isOpen={openAccordions[category]} />
+                  </AccordionHeader>
+                  {renderToySelection(category)}
+                </AccordionItem>
+              ))}
+            </MobileAccordion>
           </SmallColumnContainer>
         </ColumnContainer>
 
