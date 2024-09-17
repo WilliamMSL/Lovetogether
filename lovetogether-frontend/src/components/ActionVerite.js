@@ -21,7 +21,7 @@ const Container = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh;
+  height:100%;
   width: 100vw;
   overflow: hidden;
   background-color: ${({ intensity }) => 

@@ -15,7 +15,7 @@ import whiteLogoSvg from '../images/logo-5.svg';
 const BackgroundContainer = styled.div`
   position: relative;
   width: 100%;
-  height: 100vh;
+  height: 100%;
   overflow: hidden;
   background-color: #FFFFFF;
   
@@ -80,7 +80,7 @@ const OverlayContainer = styled.div`
   top: 0;
   left: 0;
   width: 100%;
-  height: 100vh;
+  height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -111,7 +111,7 @@ const WhiteOverlay = styled.div`
   top: 0;
   left: 0;
   width: 100%;
-  height: 100vh;
+  height: 100%;
   z-index: 1500;
   pointer-events: none;
   opacity: 1;

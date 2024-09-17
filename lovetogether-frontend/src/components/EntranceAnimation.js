@@ -7,7 +7,7 @@ import CardsWrapper from './CardsWrapper'; // Assurez-vous que CardsWrapper est 
 const BackgroundContainer = styled.div`
   position: relative;
   width: 100%;
-  height: 100vh;
+  height: 100v%;
   overflow: hidden;
   background-color: ${({ bgColor }) => bgColor};
 `;
@@ -17,7 +17,7 @@ const WhiteOverlay = styled.div`
   top: 0;
   left: 0;
   width: 100%;
-  height: 100vh;
+  height: 100v%;
   background-color: white;
   z-index: 100000002;
   pointer-events: none;
@@ -28,7 +28,7 @@ const OverlayContainer = styled.div`
   top: 0;
   left: 0;
   width: 100%;
-  height: 100vh;
+  height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
