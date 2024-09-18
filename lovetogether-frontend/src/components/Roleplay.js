@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import axios from 'axios';
 import backgroundImage from '../images/logo-5.svg';
 import GrainEffect from './GrainEffect';
@@ -43,6 +43,23 @@ const Card = styled.div`
     height: 60vh;
     overflow-y: scroll;
   }
+`;
+
+const pulse = keyframes`
+  0% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0.6;
+  }
+`;
+
+const LoadingCard = styled(Card)`
+  background-color: #f0f0f0;
+  animation: ${pulse} 1.5s ease-in-out infinite;
 `;
 
 const Title = styled.h1`
@@ -108,14 +125,6 @@ const Button = styled.button`
   }
 `;
 
-const SpinnerContainer = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  width: 100vw;
-`;
-
 const ErrorMessage = styled.div`
   color: red;
   margin-bottom: 20px;
@@ -124,10 +133,12 @@ const ErrorMessage = styled.div`
 const Roleplay = () => {
   const [roleplay, setRoleplay] = useState(null);
   const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchRandomRoleplay = async () => {
     try {
       setError(null);
+      setIsLoading(true);
       console.log('Fetching roleplay from:', `${API_BASE_URL}/api/roleplay/random`);
       const response = await axios.get(`${API_BASE_URL}/api/roleplay/random`);
       console.log('Roleplay response:', response.data);
@@ -135,6 +146,8 @@ const Roleplay = () => {
     } catch (error) {
       console.error('Erreur lors de la récupération du roleplay:', error);
       setError('Impossible de charger le roleplay. Veuillez réessayer.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -151,21 +164,17 @@ const Roleplay = () => {
     );
   }
 
-  if (!roleplay) {
-    return (
-      <SpinnerContainer>
-        <div className="animate-spin rounded-full h-32 w-32 border-t-4 border-b-4 border-blue-500"></div>
-      </SpinnerContainer>
-    );
-  }
-
   return (
     <PageContainer>
-      <Card>
-        <Title>{roleplay.title}</Title>
-        <Content>{roleplay.description}</Content>
-        <Footer>LoveTogether</Footer>
-      </Card>
+      {isLoading ? (
+        <LoadingCard />
+      ) : (
+        <Card>
+          <Title>{roleplay.title}</Title>
+          <Content>{roleplay.description}</Content>
+          <Footer>LoveTogether</Footer>
+        </Card>
+      )}
 
       <ButtonContainer>
         <Button onClick={fetchRandomRoleplay}>

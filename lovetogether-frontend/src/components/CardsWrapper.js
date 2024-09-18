@@ -9,12 +9,12 @@ import whiteLogo10Svg from '../images/logo-role.svg';
 import whiteLogo20Svg from '../images/logo-positions.svg';
 
 import truthOrDareImage from '../images/TRUTHORDARE.png';
-import positionsImage from '../images/POSITIONS.png';
-import roleImage from '../images/ROLE.png';
+import roleImage from '../images/POSITIONS.png';
+import positionsImage from '../images/ROLE.png';
 
 import truthOrDareImageMobile from '../images/TRUTHORDARE-mobile.png';
-import positionsImageMobile from '../images/POSITIONS-mobile.png';
-import roleImageMobile from '../images/ROLE-mobile.png';
+import roleImageMobile from '../images/POSITIONS-mobile.png';
+import  positionsImageMobile from '../images/ROLE-mobile.png';
 
 const CardsContainer = styled.div`
   display: flex;
