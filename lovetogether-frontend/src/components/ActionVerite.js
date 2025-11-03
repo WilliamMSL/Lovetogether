@@ -13,6 +13,40 @@ import GrainEffect from './GrainEffect';
 import timerSound from '../sound/gong.mp3';
 import AddTruthOrDareModal from './AddTruthOrDareModal';
 
+const buildPlayerParams = (player, firstPlayerName, secondPlayerName) => {
+  const mappedPlayer = player === firstPlayerName ? 'firstName1' : 'firstName2';
+  const otherPlayer = player === firstPlayerName ? secondPlayerName : firstPlayerName;
+
+  return { mappedPlayer, otherPlayer };
+};
+
+const buildToysParam = (selectedToys) => {
+  if (!Array.isArray(selectedToys) || selectedToys.length === 0) {
+    return ['all'];
+  }
+
+  return [...selectedToys, 'all'];
+};
+
+const buildRequestParams = ({ type, mappedPlayer, intensity, toysParam }) => ({
+  type,
+  player: mappedPlayer,
+  toys: toysParam.join(','),
+  intensity,
+});
+
+const formatTemplate = (template, player, otherPlayer) => {
+  if (!template) {
+    return '';
+  }
+
+  const normalizedTemplate = template.charAt(0).toLowerCase() + template.slice(1);
+
+  return normalizedTemplate
+    .replace(/{Currentplayer}/gi, player)
+    .replace(/{AutrePlayer}/gi, otherPlayer);
+};
+
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:1812';
 console.log('API Base URL:', API_BASE_URL);
 
@@ -263,31 +297,27 @@ const ActionVerite = () => {
   const fetchRandomActionOrTruth = async (type, player) => {
     try {
       console.log("Selected toys before request:", selectedToys);
-      const mappedPlayer = player === firstName1 ? 'firstName1' : 'firstName2';
-      const otherPlayer = player === firstName1 ? firstName2 : firstName1;
-      const toysParam = selectedToys?.length ? [...selectedToys, 'all'] : ['all'];
-  
+      const { mappedPlayer, otherPlayer } = buildPlayerParams(player, firstName1, firstName2);
+      const toysParam = buildToysParam(selectedToys);
+      const params = buildRequestParams({ type, mappedPlayer, intensity, toysParam });
+
       console.log("Toys parameter for request:", toysParam);
       console.log('Fetching from:', `${API_BASE_URL}/api/truthordare/random`);
-      console.log('Request params:', { type, player: mappedPlayer, toys: toysParam.join(','), intensity });
-  
+      console.log('Request params:', params);
+
       const response = await axios.get(`${API_BASE_URL}/api/truthordare/random`, {
-        params: { type, player: mappedPlayer, toys: toysParam.join(','), intensity }
+        params,
       });
-  
+
       console.log('Full API Response:', response.data);
-  
+
       if (response.data && response.data.template) {
-        let { template, duration, toys } = response.data;
+        const { template, duration, toys } = response.data;
         setDuration(duration || null);
         setRemainingTime(duration);
         setCurrentToys(toys || []);
-  
-        template = template.charAt(0).toLowerCase() + template.slice(1);
-        template = template.replace(/{Currentplayer}/gi, player)
-                           .replace(/{AutrePlayer}/gi, otherPlayer);
-  
-        return template;
+
+        return formatTemplate(template, player, otherPlayer);
       } else {
         console.error('Unexpected API response format:', response.data);
         throw new Error('Réponse API inattendue');
