@@ -48,18 +48,7 @@ const ButtonContainer = styled.div`
   bottom: 48px;
   display: flex;
   gap: 20px;
-  margin-top: 20px;
   z-index: 5;
-`;
-
-const ContentWrapper = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  width: 100vw;
-  z-index: 1;
 `;
 
 const FrameContainer = styled.div`
@@ -75,30 +64,14 @@ const FrameContainer = styled.div`
   }
 `;
 
+const getRandomPositionId = () => Math.floor(Math.random() * 500) + 1;
+
 const Generator = () => {
-  const [number, setNumber] = useState(() => {
-    // Générer un nombre aléatoire entre 1 et 500 lors de l'initialisation
-    return Math.floor(Math.random() * 500) + 1;
-  });
+  const [number, setNumber] = useState(getRandomPositionId);
 
   const generateNumber = () => {
-    const randomNumber = Math.floor(Math.random() * 500) + 1;
-    setNumber(randomNumber);
+    setNumber(getRandomPositionId());
   };
-
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === 'Enter') {
-        generateNumber();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, []);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -116,17 +89,15 @@ const Generator = () => {
 
   return (
     <Container>
-      <ContentWrapper>
-        <FrameContainer>
-          <div style={{ transform: 'translateY(-120px)' }}>
-            <iframe
-              src={`https://sexpositions.club/positions/${number}.html`}
-              title="Position Generator"
-              style={{ width: '100%', height: '1000px', border: 'none'}}
-            />
-          </div>
-        </FrameContainer>
-      </ContentWrapper>
+      <FrameContainer>
+        <div style={{ transform: 'translateY(-120px)' }}>
+          <iframe
+            src={`https://sexpositions.club/positions/${number}.html`}
+            title="Position Generator"
+            style={{ width: '100%', height: '1000px', border: 'none'}}
+          />
+        </div>
+      </FrameContainer>
       <ButtonContainer>
         <Button onClick={generateNumber}>
           <span role="img" aria-label="Tour">👀</span> Générer
