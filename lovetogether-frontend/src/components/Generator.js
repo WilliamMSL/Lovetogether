@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import backgroundImage from '../images/logo-5.svg';
 import GrainEffect from './GrainEffect';
+import PageHeader from './PageHeader';
+import { ReactComponent as RefreshIcon } from '../images/assets/icons/refresh.svg';
+import useButtonSound from '../hooks/useButtonSound';
 
 const Container = styled.div`
   display: flex;
@@ -11,10 +13,7 @@ const Container = styled.div`
   height: 100%;
   width: 100vw;
   overflow: hidden;
-  background-image: url(${backgroundImage});
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  background-color: #FFFFFF;
   position: relative; 
   z-index: 5;
 `;
@@ -23,23 +22,31 @@ const Button = styled.button`
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 20px;
-  background-color: white;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: 12px;
+  padding: 0 22px;
+  height: 44px;
+  background-color: #F3F3F3;
+  border: none;
+  border-radius: 1000px;
   color: #000;
   font-family: 'Poppins', sans-serif;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   z-index: 5;
+  transition: all 0.2s ease;
 
   &:hover {
-    background-color: #fff5f5;
-    color: #ff4500;
-    border-color: #ff4500;
-    box-shadow: 0 6px 12px rgba(255, 69, 0, 0.3);
+    background-color: #E8E8E8;
+    transform: scale(1.02);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
   }
 `;
 
@@ -68,6 +75,7 @@ const getRandomPositionId = () => Math.floor(Math.random() * 500) + 1;
 
 const Generator = () => {
   const [number, setNumber] = useState(getRandomPositionId);
+  const playButtonSound = useButtonSound();
 
   const generateNumber = () => {
     setNumber(getRandomPositionId());
@@ -89,6 +97,7 @@ const Generator = () => {
 
   return (
     <Container>
+      <PageHeader />
       <FrameContainer>
         <div style={{ transform: 'translateY(-120px)' }}>
           <iframe
@@ -99,8 +108,8 @@ const Generator = () => {
         </div>
       </FrameContainer>
       <ButtonContainer>
-        <Button onClick={generateNumber}>
-          <span role="img" aria-label="Tour">👀</span> Générer
+        <Button onClick={() => { playButtonSound(); generateNumber(); }}>
+          Générer <RefreshIcon />
         </Button>
       </ButtonContainer>
       <GrainEffect />

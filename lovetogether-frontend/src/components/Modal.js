@@ -4,12 +4,15 @@ import { UserContext } from './UserContext';
 import { ReactComponent as PlusIcon } from '../images/assets/icons/plus.svg';
 import { ReactComponent as MinusIcon } from '../images/assets/icons/minus.svg';
 import { ReactComponent as ChevronDownIcon } from '../images/assets/icons/chevron-down.svg';
+import { ReactComponent as XIcon } from '../images/assets/icons/x-square.svg';
+import logger from '../utils/logger';
+import { API_BASE_URL } from '../constants/api';
+import backgroundCard1 from '../images/backgrounds/background-card-1.png';
+import useButtonSound from '../hooks/useButtonSound';
 
 // Définir l'URL de base de l'API
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:1812';
-console.log('API Base URL:', API_BASE_URL);
+logger.log('API Base URL:', API_BASE_URL);
 
-// Styled components
 const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
@@ -17,7 +20,7 @@ const ModalOverlay = styled.div`
   width: 100%;
   height: 100%;
   background: rgba(0, 0, 0, 0.8);
-  display: flex;
+  display: ${props => props.isOpen ? 'flex' : 'none'};
   align-items: center;
   justify-content: center;
   z-index: 10000000000000000000000;
@@ -26,16 +29,70 @@ const ModalOverlay = styled.div`
 const ModalContent = styled.div`
   background: #fff;
   border-radius: 20px;
-  padding: 48px;
-  width: 80%;
+  padding: 24px;
+  width: 90%;
   max-width: 800px;
   position: relative;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  max-height: 80vh;
+  overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  
+  &::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
 
   @media (max-width: 768px) {
-    height: 80%;
     padding: 24px;
-    overflow-y: auto;
+    max-height: 90vh;
+  }
+`;
+
+const TitleContainer = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+`;
+
+const SectionTitle = styled.h2`
+  font-size: 26px;
+  font-weight: 500;
+  color: #000;
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+
+  @media (max-width: 768px) {
+    font-size: 22px;
+  }
+`;
+
+const CloseButton = styled.button`
+  width: 40px;
+  height: 40px;
+  background-color: #F3F3F3;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+  
+  &:hover {
+    background-color: #E8E8E8;
+    transform: scale(1.05);
+  }
+
+  &:active {
+    transform: scale(0.95);
   }
 `;
 
@@ -43,112 +100,103 @@ const Button = styled.button`
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 20px;
-  background-color: black;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: 12px;
-  color: white;
+  padding: 0 22px;
+  height: 44px;
+  background-color: #F3F3F3;
+  border: none;
+  border-radius: 1000px;
+  color: #000;
   font-family: 'Poppins', sans-serif;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease, background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-  width: fit-content;
+  transition: all 0.2s ease;
+  min-width: 120px;
 
   &:hover {
-    background-color: #fff5f5;
-    color: #ff4500;
-    border-color: #ff4500;
-    box-shadow: 0 6px 12px rgba(255, 69, 0, 0.3);
+    background-color: #E8E8E8;
+    transform: scale(1.02);
+  }
+
+  &:active {
+    transform: scale(0.98);
   }
 `;
 
 const ButtonContainer = styled.div`
-  margin-top: 16px;
+  margin-top: 24px;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-`;
-
-const CloseButton = styled.button`
-  position: absolute;
-  top: 40px;
-  right: 40px;
-  background: none;
-  border: none;
-  font-size: 40px;
-  cursor: pointer;
-  color: #000;
-`;
-
-const SectionTitle = styled.h2`
-  font-size: 46px;
-  font-weight: bold;
-  color: #000;
-  margin-bottom: 32px;
-  margin-right: 64px;
-  line-height: 50px;
-
-  @media (max-width: 768px) {
-    font-size: 24px;
-    line-height: 30px;
-  }
+  justify-content: center;
+  width: 100%;
 `;
 
 const SubTitle = styled.h3`
-  font-size: 20px;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 0px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  margin-bottom: 16px;
+  font-family: 'Poppins', sans-serif;
 `;
 
 const SubTitleMargin = styled.h3`
-  font-size: 20px;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  margin-bottom: 16px;
+  font-family: 'Poppins', sans-serif;
 `;
 
 const ChipsContainer = styled.div`
   display: flex;
   flex-wrap: wrap;
-  column-gap: 0px;
-  row-gap: 10px;
+  gap: 12px;
   align-items: center;
 `;
 
 const Chip = styled.button`
-  background: ${props => props.isSelected ? '#ff4500' : '#f0f0f0'};
-  color: ${props => props.isSelected ? '#fff' : '#000'};
-  border: 2px solid ${props => props.isSelected ? '#ff4500' : '#ddd'};
-  border-radius: 20px;
-  padding: 8px 16px;
+  height: 40px;
+  padding: 0 16px;
+  background-color: ${props => props.isSelected ? '#C3C3C3' : '#F3F3F3'};
+  color: #000;
+  border: none;
+  border-radius: 14px;
   cursor: pointer;
-  font-size: 16px;
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 
   &:hover {
-    background: #ff4500;
-    color: #fff;
+    background-color: ${props => props.isSelected ? '#B0B0B0' : '#E8E8E8'};
+    transform: scale(1.02);
+  }
+
+  &:active {
+    transform: scale(0.98);
   }
 `;
 
 const CategoryChip = styled(Chip)`
-  background: ${props => props.isSelected ? '#000' : '#000'};
-  color: ${props => props.isSelected ? '#fff' : '#fff'};
-  margin-right: 10px;
-  border: double;
+  background-image: url(${backgroundCard1});
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  color: #fff;
 `;
 
 const ToyChip = styled(Chip)`
-  background: ${props => props.isSelected ? '#ff4500' : '#f0f0f0'};
-  color: ${props => props.isSelected ? '#fff' : '#000'};
-  display: flex;
-  align-items: center;
-  margin-right: 10px;
-  gap: 8px;
+  background-color: ${props => props.isSelected ? '#C3C3C3' : '#F3F3F3'};
+  color: #000;
+  
+  svg {
+    color: #000;
+    stroke: #000;
+  }
 `;
 
 const ColumnContainer = styled.div`
@@ -184,7 +232,7 @@ const MobileAccordion = styled.div`
 `;
 
 const AccordionItem = styled.div`
-  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 12px;
 `;
 
 const AccordionHeader = styled.button`
@@ -192,32 +240,121 @@ const AccordionHeader = styled.button`
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  padding: 15px 0;
-  background: none;
+  padding: 12px 16px;
+  height: 40px;
+  background-color: #F3F3F3;
   border: none;
+  border-radius: 14px;
   text-align: left;
   cursor: pointer;
-  font-size: 18px;
-  font-weight: bold;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #000;
+  transition: all 0.2s ease;
+  margin-bottom: 8px;
+
+  &:hover {
+    background-color: #E8E8E8;
+  }
 `;
 
 const AccordionContent = styled.div`
-  padding: 0 0 15px 0;
+  padding: 8px 0;
   display: ${props => props.isOpen ? 'block' : 'none'};
 `;
 
 const MobileListItem = styled.div`
   display: flex;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
+  gap: 0;
 `;
 
-const Checkbox = styled.input`
-  margin-right: 10px;
+const CheckboxWrapper = styled.div`
+  position: relative;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 `;
+
+const CheckboxInput = styled.input`
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  width: 0;
+  height: 0;
+`;
+
+const CheckboxLabel = styled.label`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #C2C2C2;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  background-color: ${props => props.checked ? '#C3C3C3' : 'transparent'};
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  
+  @media (max-width: 768px) {
+    width: 16px;
+    height: 16px;
+    border-width: 1.5px;
+  }
+  
+  &:after {
+    content: '';
+    position: absolute;
+    display: ${props => props.checked ? 'block' : 'none'};
+    left: 50%;
+    top: 50%;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: translate(-50%, -60%) rotate(45deg);
+    
+    @media (max-width: 768px) {
+      width: 4px;
+      height: 8px;
+      border-width: 0 1.5px 1.5px 0;
+    }
+  }
+`;
+
+const Checkbox = ({ id, checked, onChange, ...props }) => {
+  return (
+    <CheckboxWrapper>
+      <CheckboxInput
+        type="checkbox"
+        id={id}
+        checked={checked}
+        onChange={onChange}
+        {...props}
+      />
+      <CheckboxLabel
+        htmlFor={id}
+        checked={checked}
+        onClick={(e) => {
+          e.preventDefault();
+          onChange();
+        }}
+      />
+    </CheckboxWrapper>
+  );
+};
 
 const Label = styled.label`
-  font-size: 16px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #000;
+  cursor: pointer;
 `;
 
 const DesktopChipsContainer = styled(ChipsContainer)`
@@ -233,42 +370,38 @@ const ChevronIcon = styled(ChevronDownIcon)`
   transform: ${props => props.isOpen ? 'rotate(180deg)' : 'rotate(0)'};
 `;
 
-const MobileDeselectAllButton = styled(Button)`
+const MobileDeselectAllButton = styled.button`
   display: none;
   @media (max-width: 768px) {
     display: flex;
-
     align-items: center;
     gap: 8px;
-    padding: 00px 0px;
-    background-color: white;
-    border: 1px solid rgba(0, 0, 0, 0);
-    border-radius: 12px;
-    color: black;
-    opacity:80%;
+    padding: 0;
+    background: none;
+    border: none;
+    color: #666;
     font-family: 'Poppins', sans-serif;
     font-size: 14px;
     font-weight: 500;
-    text:
     cursor: pointer;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0);
-    transition: transform 0.3s ease, background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    transition: color 0.2s ease;
     width: fit-content;
     text-decoration: underline;
+    margin-bottom: 16px;
 
     &:hover {
-      background-color: white;
       color: #000;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0);
-      border-color: white;
     }
   }
 `;
 
 const Modal = ({ isOpen, onClose, onSave }) => {
   const { firstName1, firstName2, selectedToys, updateUserPreferences } = useContext(UserContext);
+  const playButtonSound = useButtonSound();
 
   const [toysByCategory, setToysByCategory] = useState({});
+  const [loadingToys, setLoadingToys] = useState(true);
+  const [toysError, setToysError] = useState(null);
   const [tempFormState, setTempFormState] = useState(() => ({
     firstName1: localStorage.getItem('firstName1') || firstName1 || '',
     firstName2: localStorage.getItem('firstName2') || firstName2 || '',
@@ -289,13 +422,27 @@ const Modal = ({ isOpen, onClose, onSave }) => {
 
   useEffect(() => {
     const fetchToys = async () => {
+      setLoadingToys(true);
+      setToysError(null);
+      
       try {
+        logger.log('Fetching toys from:', `${API_BASE_URL}/api/toys`);
         const response = await fetch(`${API_BASE_URL}/api/toys`);
+        
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
+        
         const toys = await response.json();
-        console.log('Fetched toys:', toys);
+        logger.log('Fetched toys:', toys);
+
+        if (!Array.isArray(toys) || toys.length === 0) {
+          logger.warn('No toys found in API response');
+          setToysError('Aucun jouet trouvé dans la base de données');
+          setToysByCategory({});
+          setLoadingToys(false);
+          return;
+        }
 
         const groupedToys = toys.reduce((acc, toy) => {
           const category = toy.category || 'Uncategorized';
@@ -306,6 +453,7 @@ const Modal = ({ isOpen, onClose, onSave }) => {
           return acc;
         }, {});
 
+        logger.log('Grouped toys by category:', groupedToys);
         setToysByCategory(groupedToys);
 
         setTempFormState(prev => {
@@ -317,17 +465,24 @@ const Modal = ({ isOpen, onClose, onSave }) => {
               return acc;
             }, {}),
           };
-          console.log('Updated tempFormState:', updatedState);
+          logger.log('Updated tempFormState:', updatedState);
           return updatedState;
         });
 
       } catch (error) {
-        console.error('Error fetching toys:', error);
+        logger.error('Error fetching toys:', error);
+        setToysError(`Erreur lors du chargement des jouets: ${error.message}`);
+        setToysByCategory({});
+      } finally {
+        setLoadingToys(false);
       }
     };
 
-    fetchToys();
-  }, []);
+    // Ne fetch que si le modal est ouvert
+    if (isOpen) {
+      fetchToys();
+    }
+  }, [isOpen]);
 
   const handleChange = (e) => {
     setTempFormState(prev => ({
@@ -391,6 +546,7 @@ const Modal = ({ isOpen, onClose, onSave }) => {
   };
 
   const handleSave = () => {
+    playButtonSound();
     updateUserPreferences(tempFormState);
     localStorage.setItem('firstName1', tempFormState.firstName1);
     localStorage.setItem('firstName2', tempFormState.firstName2);
@@ -427,7 +583,6 @@ const Modal = ({ isOpen, onClose, onSave }) => {
           {toysByCategory[category].map((toy, toyIndex) => (
             <MobileListItem key={`toy-${category}-${toyIndex}`}>
               <Checkbox
-                type="checkbox"
                 id={`toy-${toy.name_id}`}
                 checked={tempFormState.selectedToys.includes(toy.name_id)}
                 onChange={() => toggleToySelection(toy.name_id)}
@@ -455,36 +610,52 @@ const Modal = ({ isOpen, onClose, onSave }) => {
     }
   };
 
+  const handleOverlayClick = (e) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
-    <ModalOverlay>
-      <ModalContent>
-        <CloseButton onClick={onClose}>&times;</CloseButton>
-        <SectionTitle>Personnaliser votre expérience</SectionTitle>
+    <ModalOverlay isOpen={isOpen} onClick={handleOverlayClick}>
+      <ModalContent onClick={(e) => e.stopPropagation()}>
+        <TitleContainer>
+          <SectionTitle>Personnaliser votre expérience</SectionTitle>
+          <CloseButton onClick={onClose}>
+            <XIcon />
+          </CloseButton>
+        </TitleContainer>
         <ColumnContainer>
           <SmallColumnContainer>
-            <SubTitleMargin>À qui avons nous l'honneur ?</SubTitleMargin>
-            <InputField
-              type="text"
-              name="firstName1"
-              placeholder="Femme"
-              value={tempFormState.firstName1}
-              onChange={handleChange}
-            />
-            <InputField
-              type="text"
-              name="firstName2"
-              placeholder="Homme"
-              value={tempFormState.firstName2}
-              onChange={handleChange}
-            />
-          </SmallColumnContainer>
-          <SmallColumnContainer>
-            <SubTitle>Qu'est ce qu'il y a au menu ?</SubTitle>
+           
             <MobileDeselectAllButton onClick={deselectAllToys}>
               Tout désélectionner
             </MobileDeselectAllButton>
+            
+            {loadingToys && (
+              <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+                Chargement des jouets...
+              </div>
+            )}
+            
+            {toysError && (
+              <div style={{ padding: '20px', textAlign: 'center', color: '#ff4500' }}>
+                {toysError}
+                <br />
+                <small style={{ color: '#666', marginTop: '10px', display: 'block' }}>
+                  Vérifiez que le serveur API est démarré sur {API_BASE_URL}
+                </small>
+              </div>
+            )}
+            
+            {!loadingToys && !toysError && Object.keys(toysByCategory).length === 0 && (
+              <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+                Aucun jouet disponible
+              </div>
+            )}
+            
             <DesktopChipsContainer>
               {Object.keys(toysByCategory).map((category, index) => (
                 <React.Fragment key={index}>

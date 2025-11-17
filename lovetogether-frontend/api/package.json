@@ -2,11 +2,13 @@
   "name": "functions",
   "description": "Cloud Functions for Firebase",
   "scripts": {
+    "dev": "node index.js",
+    "start": "node index.js",
     "serve": "firebase emulators:start --only functions",
     "shell": "firebase functions:shell",
-    "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "logs": "firebase functions:log",
+    "test-api": "node test-api.js"
   },
   "engines": {
     "node": "20.x"

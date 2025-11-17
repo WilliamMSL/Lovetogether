@@ -1,9 +1,10 @@
 import React, { forwardRef } from 'react';
 import styled from 'styled-components';
-import LogoImage from '../images/logo-5.svg';
+import LogoImage from '../images/LoveTogether_logo.svg';
 
 const LogoContainer = styled.img`
   width: 100%; 
+  height: auto;
   position: absolute;
   top: 50%;
   left: 50%;

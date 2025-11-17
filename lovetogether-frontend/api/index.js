@@ -86,17 +86,27 @@ app.use('/api/roleplay', roleplayRoutes);
       next();
     });
 
-    // Initialisation de Redis
-    logger.info('Initialisation du client Redis...');
-    const redisClient = redis.createClient({
-      url: process.env.REDIS_URL,
-    });
+    // Initialisation de Redis (optionnel)
+    let redisClient = null;
+    if (process.env.REDIS_URL) {
+      try {
+        logger.info('Initialisation du client Redis...');
+        redisClient = redis.createClient({
+          url: process.env.REDIS_URL,
+        });
 
-    await redisClient.connect();
-    logger.info('Connecté avec succès à Redis');
+        await redisClient.connect();
+        logger.info('Connecté avec succès à Redis');
 
-    // Mise à disposition du client Redis dans l'application
-    app.set('redisClient', redisClient);
+        // Mise à disposition du client Redis dans l'application
+        app.set('redisClient', redisClient);
+      } catch (redisError) {
+        logger.warn('Erreur lors de la connexion à Redis, continuation sans Redis:', redisError.message);
+        redisClient = null;
+      }
+    } else {
+      logger.info('REDIS_URL non défini, Redis désactivé');
+    }
 
     // Route de test API
     app.get('/api/test', (req, res) => {

@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import axios from 'axios';
-import backgroundImage from '../images/logo-5.svg';
 import GrainEffect from './GrainEffect';
+import PageHeader from './PageHeader';
+import { ReactComponent as RefreshIcon } from '../images/assets/icons/refresh.svg';
+import backgroundCard1 from '../images/backgrounds/background-card-1.png';
+import useButtonSound from '../hooks/useButtonSound';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:1812';
 console.log('API Base URL:', API_BASE_URL);
@@ -15,20 +18,20 @@ const PageContainer = styled.div`
   min-height: 100%;
   width: 100%;
   padding: 20px;
-  background-image: url(${backgroundImage});
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  background-color: #FFFFFF;
   position: relative;
 `;
 
 const Card = styled.div`
   width: 392px;
   height: 548px;
-  background-color: white;
+  background-image: url(${backgroundCard1});
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   border-radius: 16px;
   padding: 48px;
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: none;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -42,6 +45,14 @@ const Card = styled.div`
     width: 95%;
     height: 60vh;
     overflow-y: scroll;
+    transform: scale(0.85);
+    transform-origin: center;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    
+    &::-webkit-scrollbar {
+      display: none; /* Chrome, Safari, Opera */
+    }
   }
 `;
 
@@ -65,16 +76,17 @@ const LoadingCard = styled(Card)`
 const Title = styled.h1`
   font-family: 'Poppins', sans-serif;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 20px;
   text-transform: uppercase;
+  color: #FFFFFF;
 `;
 
 const Content = styled.p`
   font-family: Paragon;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 400;
-  color: #000000;
+  color: #FFFFFF;
   margin-bottom: 30px;
 
   @media (max-width: 500px) {
@@ -87,7 +99,7 @@ const Footer = styled.div`
   text-transform: uppercase;
   font-size: 14px;
   font-weight: 400;
-  color: #000000;
+  color: #FFFFFF;
   margin-top: 20px;
 `;
 
@@ -104,24 +116,31 @@ const Button = styled.button`
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 20px;
-  background-color: white;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: 12px;
+  padding: 0 22px;
+  height: 44px;
+  background-color: #F3F3F3;
+  border: none;
+  border-radius: 1000px;
   color: #000;
   font-family: 'Poppins', sans-serif;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease, background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
   z-index: 5;
+  transition: all 0.2s ease;
 
   &:hover {
-    background-color: #fff5f5;
-    color: #ff4500;
-    border-color: #ff4500;
-    box-shadow: 0 6px 12px rgba(255, 69, 0, 0.3);
+    background-color: #E8E8E8;
+    transform: scale(1.02);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
   }
 `;
 
@@ -134,6 +153,7 @@ const Roleplay = () => {
   const [roleplay, setRoleplay] = useState(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const playButtonSound = useButtonSound();
 
   const fetchRandomRoleplay = async () => {
     try {
@@ -158,14 +178,20 @@ const Roleplay = () => {
   if (error) {
     return (
       <PageContainer>
+        <PageHeader />
         <ErrorMessage>{error}</ErrorMessage>
-        <Button onClick={fetchRandomRoleplay}>Réessayer</Button>
+        <ButtonContainer>
+          <Button onClick={() => { playButtonSound(); fetchRandomRoleplay(); }}>
+            Réessayer <RefreshIcon />
+          </Button>
+        </ButtonContainer>
       </PageContainer>
     );
   }
 
   return (
     <PageContainer>
+      <PageHeader />
       {isLoading ? (
         <LoadingCard />
       ) : (
@@ -177,8 +203,8 @@ const Roleplay = () => {
       )}
 
       <ButtonContainer>
-        <Button onClick={fetchRandomRoleplay}>
-          <span role="img" aria-label="Another one">🔄</span> Another one
+        <Button onClick={() => { playButtonSound(); fetchRandomRoleplay(); }}>
+          Another one <RefreshIcon />
         </Button>
       </ButtonContainer>
       <GrainEffect />

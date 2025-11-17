@@ -18,7 +18,7 @@ router.get('/random', async (req, res) => {
   console.log('Request headers:', req.headers);
   
   const { type, player, toys, intensity } = req.query;
-  const redisClient = req.app.get('redisClient');
+  const redisClient = req.app.get('redisClient'); // Peut être null si Redis n'est pas configuré
 
   console.log('Request params:', { type, player, toys, intensity });
 
@@ -34,15 +34,23 @@ router.get('/random', async (req, res) => {
     const playerActionsKey = `recent_actions:${player}:${type}`;
     const sharedActionsKey = `recent_actions:shared:${type}`;
 
-    console.log('Checking Redis keys:', { playerActionsKey, sharedActionsKey });
+    console.log('Redis available:', !!redisClient);
 
-    let playerActionIds, sharedActionIds;
-    try {
-      playerActionIds = await redisClient.sMembers(playerActionsKey);
-      sharedActionIds = await redisClient.sMembers(sharedActionsKey);
-    } catch (redisError) {
-      console.error('Error fetching from Redis:', redisError);
-      return res.status(500).json({ message: 'Erreur Redis', error: redisError.message });
+    let playerActionIds = [];
+    let sharedActionIds = [];
+    
+    // Essayer de récupérer depuis Redis si disponible
+    if (redisClient) {
+      try {
+        playerActionIds = await redisClient.sMembers(playerActionsKey) || [];
+        sharedActionIds = await redisClient.sMembers(sharedActionsKey) || [];
+        console.log('Redis keys retrieved:', { playerActionsKey, sharedActionsKey, playerActionIds, sharedActionIds });
+      } catch (redisError) {
+        console.warn('Error fetching from Redis (continuing without Redis):', redisError.message);
+        // Continue sans Redis
+      }
+    } else {
+      console.log('Redis not available, continuing without recent actions tracking');
     }
 
     console.log('Player action IDs:', playerActionIds);
@@ -51,12 +59,12 @@ router.get('/random', async (req, res) => {
     const allRecentActionIds = [...new Set([...playerActionIds, ...sharedActionIds])];
     console.log('All recent action IDs:', allRecentActionIds);
 
+    // Construire la requête de base
     let query = {
       type: type,
       $or: [
         { player: player },
-        { player: 'all' },
-        { player: { $in: [player, 'all'] } }
+        { player: 'all' }
       ]
     };
 
@@ -65,9 +73,21 @@ router.get('/random', async (req, res) => {
         const toyArray = toys.split(',');
         query.toys = { $in: [...toyArray, 'all'] };
       }
-      if (intensity) query.intensity = intensity;
+      if (intensity) {
+        // intensity est un tableau dans le schéma, donc on cherche dans le tableau
+        query.intensity = { $in: [intensity] };
+      }
     }
-    console.log('Base query:', JSON.stringify(query));
+    
+    console.log('Base query:', JSON.stringify(query, null, 2));
+    
+    // Vérifier combien de documents correspondent à la requête de base
+    const countBeforeFilter = await TruthOrDare.countDocuments(query);
+    console.log(`Total documents matching base query: ${countBeforeFilter}`);
+    
+    // Vérifier le total de documents dans la collection
+    const totalCount = await TruthOrDare.countDocuments({ type: type });
+    console.log(`Total documents of type '${type}' in collection: ${totalCount}`);
 
     const pipeline = [
       { $match: query },
@@ -97,10 +117,24 @@ router.get('/random', async (req, res) => {
       if (results.length === 0) {
         console.log('No results found. All actions/truths have been used recently. Resetting recent actions.');
         
-        await redisClient.del(playerActionsKey);
-        await redisClient.del(sharedActionsKey);
+        // Réinitialiser Redis si disponible
+        if (redisClient) {
+          try {
+            await redisClient.del(playerActionsKey);
+            await redisClient.del(sharedActionsKey);
+            console.log('Redis keys cleared');
+          } catch (redisError) {
+            console.warn('Error clearing Redis keys:', redisError.message);
+          }
+        }
         
-        pipeline.shift(); // Supprime le match basé sur les actions récentes
+        // Supprimer le match basé sur les actions récentes si présent
+        if (pipeline[0] && pipeline[0].$match && pipeline[0].$match._id) {
+          pipeline.shift();
+        }
+        
+        console.log('Retrying query without recent actions filter...');
+        console.log('Pipeline after reset:', JSON.stringify(pipeline));
         
         results = await TruthOrDare.aggregate(pipeline);
         console.log(`Number of results after resetting recent actions: ${results.length}`);
@@ -120,31 +154,56 @@ router.get('/random', async (req, res) => {
         });
 
         try {
-          await redisClient.sAdd(playerActionsKey, randomDocument._id.toString());
-          
-          if (randomDocument.player === 'all' || (Array.isArray(randomDocument.player) && randomDocument.player.includes('all'))) {
-            await redisClient.sAdd(sharedActionsKey, randomDocument._id.toString());
+          // Ajouter dans Redis si disponible
+          if (redisClient) {
+            await redisClient.sAdd(playerActionsKey, randomDocument._id.toString());
+            
+            if (randomDocument.player === 'all' || (Array.isArray(randomDocument.player) && randomDocument.player.includes('all'))) {
+              await redisClient.sAdd(sharedActionsKey, randomDocument._id.toString());
+            }
+
+            await redisClient.expire(playerActionsKey, 1800);
+            await redisClient.expire(sharedActionsKey, 1800);
+
+            console.log('Redis operations completed');
           }
-
-          await redisClient.expire(playerActionsKey, 1800);
-          await redisClient.expire(sharedActionsKey, 1800);
-
-          console.log('Redis operations completed');
         } catch (redisError) {
-          console.error('Redis operation failed:', redisError);
-          // Continue even if Redis fails
+          console.warn('Redis operation failed (continuing anyway):', redisError.message);
+          // Continue même si Redis échoue
         }
 
         const response = {
           template: randomDocument.template,
           duration: randomDocument.duration || null,
-          intensity: randomDocument.intensity || null
+          intensity: randomDocument.intensity || null,
+          toys: randomDocument.toys || []
         };
         console.log('Sending response:', response);
         res.json(response);
       } else {
-        console.log('No results found even after resetting recent actions. This should not happen unless the database is empty.');
-        res.status(404).json({ message: 'Aucune action ou vérité disponible.' });
+        console.log('No results found even after resetting recent actions.');
+        console.log('Query used:', JSON.stringify(query, null, 2));
+        console.log('Pipeline used:', JSON.stringify(pipeline, null, 2));
+        
+        // Vérifier si le problème vient des critères de recherche
+        const simpleQuery = { type: type };
+        const simpleCount = await TruthOrDare.countDocuments(simpleQuery);
+        
+        let errorMessage = 'Aucune action ou vérité disponible.';
+        if (simpleCount === 0) {
+          errorMessage += ` Aucun document de type '${type}' trouvé dans la base de données.`;
+        } else {
+          errorMessage += ` Il y a ${simpleCount} document(s) de type '${type}', mais aucun ne correspond aux critères (player: ${player}, toys: ${toys || 'any'}, intensity: ${intensity || 'any'}).`;
+        }
+        
+        res.status(404).json({ 
+          message: errorMessage,
+          debug: {
+            query: query,
+            totalOfType: simpleCount,
+            matchingQuery: countBeforeFilter
+          }
+        });
       }
     } catch (mongoError) {
       console.error('Error fetching from MongoDB:', mongoError);

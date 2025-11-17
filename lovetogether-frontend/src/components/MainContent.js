@@ -1,16 +1,20 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import Navbar from './navbar/navbar';
 import CardsWrapper from './CardsWrapper';
 import { useCard } from './CardContext';
-import NavbarRight from './navbar/navbarright';
-import CardRenderer from './CardRenderer';
 import gsap from 'gsap';
-import Logo from './Logo';
 import GrainEffect from './GrainEffect';
+import HeaderButton from './HeaderButton';
+import { ReactComponent as UserIcon } from '../images/assets/icons/user.svg';
+import { ReactComponent as SlidersIcon } from '../images/assets/icons/sliders.svg';
+import { ReactComponent as XIcon } from '../images/assets/icons/x-square.svg';
+import { useSettingsModal } from '../contexts/SettingsModalContext';
+import { useUsersModal } from '../contexts/UsersModalContext';
 
 // Import des images
 import whiteLogoSvg from '../images/logo-5.svg';
+import LoveTogetherLogo from '../images/LoveTogether_logo.svg';
 
 const BackgroundContainer = styled.div`
   position: relative;
@@ -37,15 +41,40 @@ const BackgroundContainer = styled.div`
   }
 `;
 
-const LogoStyled = styled(Logo)`
+const HeaderContainer = styled.div`
   position: absolute;
   top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1000;
-  width: 10%;
-  height: auto;
-  transition: z-index 0.5s ease;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 32px 50px;
+  z-index: 1002;
+  pointer-events: none;
+  
+  @media (max-width: 768px) {
+    padding-left: 30px;
+    padding-right: 30px;
+  }
+`;
+
+const LogoContainer = styled.div`
+  pointer-events: auto;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  
+  img {
+    height: 100%;
+    width: auto;
+  }
+`;
+
+const HeaderButtonsContainer = styled.div`
+  display: flex;
+  gap: 10px;
+  pointer-events: auto;
 `;
 
 const StaticLogo = styled.div`
@@ -59,11 +88,18 @@ const StaticLogo = styled.div`
 
 const CardsContainer = styled.div`
   position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   opacity: ${({ opacity }) => opacity};
   transform: translateY(${({ isAnimated }) => (isAnimated ? '0' : '50px')});
   transition: ${({ isAnimated }) => (isAnimated ? 'transform 0.8s ease, opacity 0.8s ease' : 'none')};
   pointer-events: ${({ clickable }) => (clickable ? 'auto' : 'none')};
   z-index: 1000;
+  padding-bottom: 100px;
 `;
 
 const GrainContainer = styled.div`
@@ -93,17 +129,53 @@ const ButtonContainer = styled.div`
   top: 70%;
   pointer-events: auto;
   z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+`;
+
+const QuestionText = styled.div`
+  font-size: 18px;
+  font-weight: 600;
+  color: #000;
+  margin-bottom: 10px;
+  font-family: 'Poppins', sans-serif;
+  text-align: center;
+`;
+
+const ButtonsWrapper = styled.div`
+  display: flex;
+  gap: 15px;
 `;
 
 const Button = styled.button`
-  width: 100%;
-  max-width: 200px;
-  padding: 10px;
+  padding: 12px 30px;
   font-size: 16px;
-  color: #000;
+  font-weight: 600;
+  color: #fff;
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
   cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+  transition: all 0.2s;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+
+  &.yes {
+    background: #191919;
+    &:hover {
+      background: #2d2d2d;
+      transform: translateY(-2px);
+    }
+  }
+
+  &.no {
+    background: #EF4136;
+    &:hover {
+      background: #d6362a;
+      transform: translateY(-2px);
+    }
+  }
 `;
 
 const WhiteOverlay = styled.div`
@@ -118,38 +190,76 @@ const WhiteOverlay = styled.div`
   transition: opacity 1s ease;
 `;
 
-const ImageContainer = styled.div`
+const BottomButtonContainer = styled.div`
   position: absolute;
-  bottom: 20px;
-  left: 20px;
-  z-index: 1000;
+  bottom: 48px;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  z-index: 1001;
+`;
+
+const GenerateButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 22px;
+  height: 44px;
+  background-color: #F3F3F3;
+  border: none;
+  border-radius: 1000px;
+  color: #000;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 1001;
+  transition: all 0.2s ease;
+  min-width: 120px;
+
+  &:hover {
+    background-color: #E8E8E8;
+    transform: scale(1.02);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
 `;
 
 const MainContent = () => {
-  const { selectedCard, resetCards } = useCard();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { resetCards } = useCard();
+  const { openModal } = useSettingsModal();
+  const { openUsersModal } = useUsersModal();
   const [cardsOpacity, setCardsOpacity] = useState(0);
   const [isAnimated, setIsAnimated] = useState(false);
   const [cardsClickable, setCardsClickable] = useState(false);
   const [logoSrc, setLogoSrc] = useState(whiteLogoSvg);
   const [showBackgroundImage, setShowBackgroundImage] = useState(false);
   const [showNavbar, setShowNavbar] = useState(false);
+  const [hasAcceptedAge, setHasAcceptedAge] = useState(() => {
+    return localStorage.getItem('hasAcceptedAge') === 'true';
+  });
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const [hoveredCardLabel, setHoveredCardLabel] = useState(null);
   const cardsRef = useRef(null);
   const overlayRef = useRef(null);
   const buttonRef = useRef(null);
-  const logoRef = useRef(null);
+  
+  const isHomePage = location.pathname === '/';
 
-  const handleEnter = () => {
-    gsap.to(logoRef.current, {
-      width: '150px',
-      top: '100px',
-      duration: 3,
-      ease: 'power3.out',
-      onComplete: () => {
-        gsap.to(logoRef.current, {
-          duration: 0.5,
-        });
-      },
-    });
+  const handleAgeVerification = (accepted) => {
+    if (!accepted) {
+      // Rediriger vers Google.fr si l'utilisateur n'est pas majeur
+      window.location.href = 'https://www.google.fr';
+      return;
+    }
+
+    // Sauvegarder dans localStorage que l'utilisateur a accepté
+    localStorage.setItem('hasAcceptedAge', 'true');
+    setHasAcceptedAge(true);
 
     gsap.to(buttonRef.current, {
       duration: 1.5,
@@ -184,40 +294,41 @@ const MainContent = () => {
             },
           });
         }
-
-        gsap.from('.navbar', {
-          y: -50,
-          opacity: 0,
-          duration: 0.5,
-          ease: 'power2.out',
-          delay: 0.5
-        });
       },
     });
   };
 
-  const handleXIconClick = () => {
+  // Si l'utilisateur a déjà accepté, afficher directement le contenu
+  useEffect(() => {
+    if (hasAcceptedAge) {
+      setIsAnimated(true);
+      setCardsOpacity(1);
+      setShowNavbar(true);
+      setCardsClickable(true);
+      if (overlayRef.current) {
+        overlayRef.current.style.display = 'none';
+        overlayRef.current.style.pointerEvents = 'none';
+      }
+      if (buttonRef.current) {
+        buttonRef.current.style.display = 'none';
+        buttonRef.current.style.pointerEvents = 'none';
+      }
+      if (cardsRef.current) {
+        gsap.set(cardsRef.current, { opacity: 1, y: 0 });
+      }
+    }
+  }, [hasAcceptedAge]);
+
+
+
+
+  const handleLogoClick = () => {
+    navigate('/');
+    // Réinitialiser l'état si nécessaire
+    resetCards();
     setLogoSrc(whiteLogoSvg);
     setShowBackgroundImage(false);
-    setTimeout(() => {
-      resetCards();
-      setIsAnimated(false);
-      setCardsOpacity(1);
-      setCardsClickable(true);
-      if (cardsRef.current) {
-        gsap.set(cardsRef.current, { opacity: 1 });
-      }
-    }, 0);
   };
-
-  useEffect(() => {
-    if (selectedCard) {
-      setShowBackgroundImage(false);
-    } else {
-      setLogoSrc(whiteLogoSvg);
-      setShowBackgroundImage(false);
-    }
-  }, [selectedCard]);
 
   return (
     <BackgroundContainer 
@@ -228,39 +339,77 @@ const MainContent = () => {
         <GrainEffect />
       </GrainContainer>
 
-      <LogoStyled ref={logoRef} />
+      {showNavbar && (
+        <HeaderContainer>
+          <LogoContainer onClick={handleLogoClick} style={{ cursor: 'pointer' }}>
+            <img src={LoveTogetherLogo} alt="LoveTogether" />
+          </LogoContainer>
+          <HeaderButtonsContainer>
+            <HeaderButton 
+              icon={<UserIcon />} 
+              onClick={openUsersModal} 
+              aria-label="Joueurs"
+            />
+            <HeaderButton 
+              icon={<SlidersIcon />} 
+              onClick={openModal} 
+              aria-label="Paramètres"
+            />
+            {showBackgroundImage && (
+              <HeaderButton 
+                icon={<XIcon />} 
+                onClick={() => {
+                  setShowBackgroundImage(false);
+                  setLogoSrc(whiteLogoSvg);
+                }} 
+                aria-label="Fermer"
+              />
+            )}
+          </HeaderButtonsContainer>
+        </HeaderContainer>
+      )}
 
-      {showNavbar && <Navbar className="navbar" />}
-      {showNavbar && <NavbarRight className="navbar" onResetAnimation={handleXIconClick} />}
-
-      {!selectedCard && (
+      {isHomePage && (
         <CardsContainer
           ref={cardsRef}
-          opacity={cardsOpacity}
+          opacity={hasAcceptedAge ? cardsOpacity : 0}
           isAnimated={isAnimated}
           clickable={cardsClickable}
         >
           <CardsWrapper 
             setLogoSrc={setLogoSrc}
             setShowBackgroundImage={setShowBackgroundImage}
+            currentCardIndex={currentCardIndex}
+            onCardHover={setHoveredCardLabel}
           />
+          {showNavbar && (
+            <BottomButtonContainer>
+              <GenerateButton onClick={() => {}}>
+                {hoveredCardLabel || 'Sélectionnez une carte'}
+              </GenerateButton>
+            </BottomButtonContainer>
+          )}
         </CardsContainer>
       )}
 
-      {selectedCard && <CardRenderer />}
-
-      <WhiteOverlay ref={overlayRef} />
-      <OverlayContainer>
-        <ButtonContainer ref={buttonRef}>
-          <Button onClick={handleEnter}>Entrer</Button>
-        </ButtonContainer>
-      </OverlayContainer>
-
-      <ImageContainer>
-        <StaticLogo>
-          <Logo />
-        </StaticLogo>
-      </ImageContainer>
+      {!hasAcceptedAge && (
+        <>
+          <WhiteOverlay ref={overlayRef} />
+          <OverlayContainer>
+            <ButtonContainer ref={buttonRef}>
+              <QuestionText>Je suis majeur ?</QuestionText>
+              <ButtonsWrapper>
+                <Button className="yes" onClick={() => handleAgeVerification(true)}>
+                  Oui
+                </Button>
+                <Button className="no" onClick={() => handleAgeVerification(false)}>
+                  Non
+                </Button>
+              </ButtonsWrapper>
+            </ButtonContainer>
+          </OverlayContainer>
+        </>
+      )}
     </BackgroundContainer>
   );
 };

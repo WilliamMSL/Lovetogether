@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect } from 'react';
-import Modal from '../Modal';
-import { useCard } from '../CardContext';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useSettingsModal } from '../../contexts/SettingsModalContext';
 import { UserContext } from '../UserContext';
 import { ReactComponent as XIcon } from '../../images/assets/icons/x-square.svg';
 import { ReactComponent as SlidersIcon } from '../../images/assets/icons/sliders.svg';
@@ -9,14 +9,18 @@ import { ReactComponent as KeyIcon } from '../../images/assets/icons/key.svg';
 import { ReactComponent as HomeIcon } from '../../images/assets/icons/home.svg';
 import { ReactComponent as CompassIcon } from '../../images/assets/icons/compass.svg';
 import { ReactComponent as AwardIcon } from '../../images/assets/icons/award.svg';
+import { ReactComponent as RouletteIcon } from '../../images/assets/icons/roulette.svg';
 import NavButton from './navbarbutton';
 
 const NavbarRight = ({ onResetAnimation }) => {
-  const [isModalOpen, setModalOpen] = useState(false);
   const [isMenuOpen, setMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 650);
-  const { selectedCard, resetCards, selectCard, hideAllCards } = useCard();
-  const { firstName1, firstName2, updateUserPreferences } = useContext(UserContext);
+  const location = useLocation();
+  const { firstName1, firstName2 } = useContext(UserContext);
+  const { openModal } = useSettingsModal();
+  const navigate = useNavigate();
+  
+  const isHomePage = location.pathname === '/';
 
   useEffect(() => {
     const handleResize = () => {
@@ -27,17 +31,10 @@ const NavbarRight = ({ onResetAnimation }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const openModal = () => setModalOpen(true);
-  const closeModal = () => setModalOpen(false);
   const toggleMenu = () => setMenuOpen(!isMenuOpen);
 
-  const handleSave = (data) => {
-    updateUserPreferences(data);
-    closeModal();
-  };
-
   const handleReturn = () => {
-    resetCards();
+    navigate('/');
     if (onResetAnimation) {
       onResetAnimation();
     }
@@ -46,15 +43,15 @@ const NavbarRight = ({ onResetAnimation }) => {
 
   const handleActionClick = () => {
     if (!firstName1 || !firstName2) {
-      setModalOpen(true);
+      openModal();
     } else {
-      selectCard('ActionVerite');
+      navigate('/action-verite');
     }
     setMenuOpen(false);
   };
 
   const handleHomeClick = () => {
-    hideAllCards();
+    navigate('/');
     setMenuOpen(false);
   };
 
@@ -83,13 +80,13 @@ const NavbarRight = ({ onResetAnimation }) => {
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '20px' }}>
               <NavButton icon={<HomeIcon />} label="Accueil" onClick={handleHomeClick} />
               <NavButton icon={<KeyIcon />} label="Actions ou vérité" onClick={handleActionClick} />
-              <NavButton icon={<CompassIcon />} label="Positions" onClick={() => { selectCard('Generator'); setMenuOpen(false); }} />
-              <NavButton icon={<AwardIcon />} label="Roleplay" onClick={() => { selectCard('Roleplay'); setMenuOpen(false); }} />
+              <NavButton icon={<CompassIcon />} label="Positions" onClick={() => { navigate('/generator'); setMenuOpen(false); }} />
+              <NavButton icon={<AwardIcon />} label="Roleplay" onClick={() => { navigate('/roleplay'); setMenuOpen(false); }} />
+              <NavButton icon={<RouletteIcon />} label="Roulette" onClick={() => { navigate('/roulette'); setMenuOpen(false); }} />
               <NavButton icon={<SlidersIcon />} label="Paramètres" onClick={openModal} />
             </div>
           </div>
         )}
-        <Modal isOpen={isModalOpen} onClose={closeModal} onSave={handleSave} />
       </>
     );
   }
@@ -97,10 +94,9 @@ const NavbarRight = ({ onResetAnimation }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'row', position: 'absolute', right: '48px', top: '48px', gap: '10px' }}>
       <NavButton icon={<SlidersIcon />} label="Paramètres" onClick={openModal} />
-      {selectedCard && (
+      {!isHomePage && (
         <NavButton icon={<XIcon />} onClick={handleReturn} />
       )}
-      <Modal isOpen={isModalOpen} onClose={closeModal} onSave={handleSave} />
     </div>
   );
 };

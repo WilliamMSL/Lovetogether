@@ -1,21 +1,43 @@
 import React, { useRef, useState, useEffect, useContext } from 'react';
 import styled from 'styled-components';
-import { gsap } from 'gsap';
 import axios from 'axios';
 import { UserContext } from './UserContext';
-import lowIntensityImage from '../images/logo-5.svg';
-import mediumIntensityImage from '../images/whitelogo-10.svg';
-import highIntensityImage from '../images/whitelogo-20.svg';
 import AVModal from './AVModal';
 import AVModalForeplay from './AVModalForeplay';
-import Modal from './Modal';
 import GrainEffect from './GrainEffect';
-import timerSound from '../sound/gong.mp3';
-import AddTruthOrDareModal from './AddTruthOrDareModal';
+import PageHeader from './PageHeader';
+import useTimer from '../hooks/useTimer';
+import useIntensityProgression from '../hooks/useIntensityProgression';
+import useButtonSound from '../hooks/useButtonSound';
+import TruthDareCard from './TruthDareCard';
+import { initializeCardPositions, animateCardSelection, resetCardPositions, flipCard } from '../utils/cardAnimations';
+import truthImage from '../images/junebaby.png';
+import dareImage from '../images/love.png';
+import logger from '../utils/logger';
+import { API_BASE_URL, API_ENDPOINTS } from '../constants/api';
+import { INTENSITY_LEVELS } from '../constants/intensityLevels';
+import { useSettingsModal } from '../contexts/SettingsModalContext';
 
-const buildPlayerParams = (player, firstPlayerName, secondPlayerName) => {
-  const mappedPlayer = player === firstPlayerName ? 'firstName1' : 'firstName2';
-  const otherPlayer = player === firstPlayerName ? secondPlayerName : firstPlayerName;
+const buildPlayerParams = (player, playersList) => {
+  // Trouver l'index du joueur actuel
+  const currentIndex = playersList.findIndex(p => p === player);
+  
+  // Pour l'API, on utilise firstName1 ou firstName2 selon la position
+  // Si plus de 2 joueurs, on alterne entre firstName1 et firstName2
+  const mappedPlayer = currentIndex % 2 === 0 ? 'firstName1' : 'firstName2';
+  
+  // Choisir un autre joueur au hasard parmi les joueurs restants
+  const otherPlayers = playersList.filter((_, index) => index !== currentIndex);
+  let otherPlayer = '';
+  
+  if (otherPlayers.length > 0) {
+    // Choisir un joueur aléatoire parmi les autres
+    const randomIndex = Math.floor(Math.random() * otherPlayers.length);
+    otherPlayer = otherPlayers[randomIndex] || '';
+  } else if (playersList.length > 0) {
+    // Fallback si un seul joueur
+    otherPlayer = playersList[0] || '';
+  }
 
   return { mappedPlayer, otherPlayer };
 };
@@ -47,8 +69,7 @@ const formatTemplate = (template, player, otherPlayer) => {
     .replace(/{AutrePlayer}/gi, otherPlayer);
 };
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:1812';
-console.log('API Base URL:', API_BASE_URL);
+logger.log('API Base URL:', API_BASE_URL);
 
 const Container = styled.div`
   display: flex;
@@ -58,17 +79,7 @@ const Container = styled.div`
   height:100%;
   width: 100vw;
   overflow: hidden;
-  background-color: ${({ intensity }) => 
-    intensity === 'low' ? '#FBF8F1' : 
-    intensity === 'medium' ? '#D51C2C' : 
-    '#5A0C13'};
-  background-image: ${({ intensity }) => 
-    intensity === 'low' ? `url(${lowIntensityImage})` : 
-    intensity === 'medium' ? `url(${mediumIntensityImage})` : 
-    `url(${highIntensityImage})`};
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  background-color: #FFFFFF;
   position: relative;
   z-index: 1;
 `;
@@ -89,143 +100,82 @@ const CardsContainer = styled.div`
   }
 `;
 
-const CardWrapper = styled.div`
-  perspective: 1000px;
-  width: 392px;
-  height: 548px;
-  position: absolute;
-  cursor: pointer;
-  z-index: 5;
-`;
-
-const Footer = styled.div`
-  font-family: 'Poppins', sans-serif;
-  text-transform: uppercase;
-  font-size: 14px;
-  font-weight: 400;
-  color: #000000;
-  margin-top: 20px;
-`;
-
-const CardInner = styled.div`
-  width: 100%;
-  height: 100%;
-  transition: transform 1s;
-  transform-style: preserve-3d;
-  position: relative;
-`;
-
-const CardFace = styled.div`
-  width: 100%;
-  height: 100%;
-  background-size: cover;
-  background-position: center;
-  border-radius: 16px;
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
-  position: absolute;
-  backface-visibility: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 20px;
-  box-sizing: border-box;
-`;
-
-const CardFront = styled(CardFace)`
-  background-image: url(${props => props.image});
-`;
-
-const Title = styled.h1`
-  font-family: 'Poppins', sans-serif;
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 20px;
-  text-transform: uppercase;
-`;
-
-const CardBack = styled(CardFace)`
-  background-color: white;
-  transform: rotateY(180deg);
-  display: flex;
-  flex-direction: column;
-  padding: 48px;
-  justify-content: space-between;
-`;
-
-const CardText = styled.div`
-  color: #333;
-  font-family: Paragon;
-  font-size: 1.75rem;
-  text-align: center;
-`;
-
-const ButtonGroup = styled.div`
-  display: flex; 
-  flex-direction: row; 
-  gap: 12px;
-
-  @media (max-width: 500px) {
-    flex-direction: column;
-    gap: 6px;
-  }
-`;
-
 const ButtonContainer = styled.div`
   position: absolute;
   bottom: 48px;
   display: flex;
-  gap: 32px;
-  margin-top: 20px;
-  z-index: 5;
   justify-content: center;
+  width: 100%;
+  z-index: 5;
+  align-items: center;
+`;
+
+const CombinedButton = styled.div`
+  display: flex;
+  align-items: stretch;
+  background-color: #F3F3F3;
+  border-radius: 1000px;
+  height: 44px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: #E8E8E8;
+    transform: scale(1.02);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
 `;
 
 const Button = styled.button`
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 10px 20px;
-  background-color: white;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: 12px;
+  padding: 0 22px;
+  height: 100%;
+  background-color: transparent;
+  border: none;
   color: #000;
   font-family: 'Poppins', sans-serif;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease, background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  transition: all 0.2s ease;
 
-  &:hover:enabled {
-    background-color: #fff5f5;
-    color: #ff4500;
-    border-color: #ff4500;
-    box-shadow: 0 6px 12px rgba(255, 69, 0, 0.3);
+  &:hover:not(:disabled) {
+    background-color: transparent;
+  }
+
+  &:active:not(:disabled) {
+    background-color: transparent;
   }
 
   &:disabled {
+    opacity: 0.5;
     cursor: not-allowed;
-    opacity: 0.6;
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
   }
 `;
 
-const TimerButton = styled(Button)`
-  background-color: #ff4500;
-  color: white;
-
-  &:hover {
-    background-color: #ff5733;
-  }
+const Divider = styled.div`
+  width: 0;
+  height: 100%;
+  border-left: 1px dashed #C2C2C2;
+  align-self: stretch;
+  margin: 0;
+  padding: 0;
 `;
 
-const SkipButton = styled(Button)`
-  background-color: #ff5733;
-  color: white;
+const TimerButton = styled(Button)``;
 
-  &:hover {
-    background-color: #ff4500;
-  }
-`;
+const SkipButton = styled(Button)``;
 
 const RecommencerButton = styled(TimerButton)``;
 
@@ -237,115 +187,110 @@ const TimerRectangle = styled.div`
   background-color: rgba(255, 69, 0, 0.5);
   z-index: 2;
 `;
-/*
-const AddButton = styled(Button)`
-  background-color: #4CAF50;
-  color: white;
-
-  &:hover {
-    background-color: #45a049;
-  }
-`;
-*/
-const ToyChip = styled.span`
-  background-color: #f0f0f0;
-  border-radius: 16px;
-  padding: 4px 8px;
-  margin-right: 4px;
-  font-size: 12px;
-`;
 
 const ActionVerite = () => {
-  const { firstName1, firstName2, selectedToys } = useContext(UserContext);
+  const { firstName1, firstName2, players, selectedToys } = useContext(UserContext);
   const [clickedCard, setClickedCard] = useState(null);
   const [randomText, setRandomText] = useState('');
   const [duration, setDuration] = useState(null);
-  const [remainingTime, setRemainingTime] = useState(null);
-  const [isPaused, setIsPaused] = useState(false);
-  const [isStarted, setIsStarted] = useState(false);
-  const intervalRef = useRef(null);
   const [showSkipButton, setShowSkipButton] = useState(false);
   const timerRectangleRef = useRef(null);
-  const animationRef = useRef(null);
-  const [showModal, setShowModal] = useState(false);
-  const [showModalForeplay, setShowModalForeplay] = useState(false);
-  const [dareClickCount, setDareClickCount] = useState(0);
-  const [dizaine, setDizaine] = useState(0);
-  const [showSetupModal, setShowSetupModal] = useState(false);
   const leftCardRef = useRef(null);
   const rightCardRef = useRef(null);
-  const [currentPlayer, setCurrentPlayer] = useState(firstName1 || '');
-  const [intensity, setIntensity] = useState('low');
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [currentToys, setCurrentToys] = useState([]);
+  
+  // Calculer le joueur actuel à partir de l'index
+  const currentPlayer = players && players.length > 0 ? players[currentPlayerIndex] : (firstName1 || '');
+
+  // Hooks personnalisés
+  const timer = useTimer(duration, timerRectangleRef);
+  const intensityProgression = useIntensityProgression();
+  const { openModal } = useSettingsModal();
+  const playButtonSound = useButtonSound();
 
   useEffect(() => {
-    console.log("ActionVerite - Loaded user data from context:", { firstName1, firstName2, selectedToys });
-    setCurrentPlayer(firstName1 || '');
-  }, [firstName1, firstName2, selectedToys]);
+    logger.log("ActionVerite - Loaded user data from context:", { firstName1, firstName2, players, selectedToys });
+    // Réinitialiser l'index si la liste de joueurs change
+    if (players && players.length > 0) {
+      setCurrentPlayerIndex(0);
+    } else if (firstName1) {
+      setCurrentPlayerIndex(0);
+    }
+  }, [firstName1, firstName2, players, selectedToys]);
 
   useEffect(() => {
-    console.log("Current intensity:", intensity);
-    gsap.set(leftCardRef.current, { x: '-150px', rotation: -10 });
-    gsap.set(rightCardRef.current, { x: '150px', rotation: 10 });
-  }, [intensity]);
-
-  useEffect(() => {
-    console.log("Updated selected toys:", selectedToys);
-  }, [selectedToys]);
+    logger.log("Current intensity:", intensityProgression.intensity);
+    initializeCardPositions(leftCardRef, rightCardRef);
+  }, [intensityProgression.intensity]);
 
   const fetchRandomActionOrTruth = async (type, player) => {
     try {
-      console.log("Selected toys before request:", selectedToys);
-      const { mappedPlayer, otherPlayer } = buildPlayerParams(player, firstName1, firstName2);
+      logger.log("Selected toys before request:", selectedToys);
+      const { mappedPlayer, otherPlayer } = buildPlayerParams(player, players && players.length > 0 ? players : [firstName1, firstName2].filter(p => p));
       const toysParam = buildToysParam(selectedToys);
-      const params = buildRequestParams({ type, mappedPlayer, intensity, toysParam });
+      const params = buildRequestParams({ 
+        type, 
+        mappedPlayer, 
+        intensity: intensityProgression.intensity, 
+        toysParam 
+      });
 
-      console.log("Toys parameter for request:", toysParam);
-      console.log('Fetching from:', `${API_BASE_URL}/api/truthordare/random`);
-      console.log('Request params:', params);
+      logger.log("Toys parameter for request:", toysParam);
+      logger.log('Fetching from:', `${API_BASE_URL}${API_ENDPOINTS.TRUTH_OR_DARE}`);
+      logger.log('Request params:', params);
 
-      const response = await axios.get(`${API_BASE_URL}/api/truthordare/random`, {
+      const response = await axios.get(`${API_BASE_URL}${API_ENDPOINTS.TRUTH_OR_DARE}`, {
         params,
       });
 
-      console.log('Full API Response:', response.data);
+      logger.log('Full API Response:', response.data);
 
       if (response.data && response.data.template) {
         const { template, duration, toys } = response.data;
         setDuration(duration || null);
-        setRemainingTime(duration);
         setCurrentToys(toys || []);
 
         return formatTemplate(template, player, otherPlayer);
       } else {
-        console.error('Unexpected API response format:', response.data);
+        logger.error('Unexpected API response format:', response.data);
         throw new Error('Réponse API inattendue');
       }
     } catch (error) {
-      console.error('Error fetching action or truth:', error);
+      logger.error('Error fetching action or truth:', error);
       if (error.response) {
-        console.error('Error data:', error.response.data);
-        console.error('Error status:', error.response.status);
-        console.error('Error headers:', error.response.headers);
+        logger.error('Error data:', error.response.data);
+        logger.error('Error status:', error.response.status);
+        logger.error('Error headers:', error.response.headers);
       } else if (error.request) {
-        console.error('No response received:', error.request);
+        logger.error('No response received:', error.request);
       } else {
-        console.error('Error message:', error.message);
+        logger.error('Error message:', error.message);
       }
-      throw error; // Relance l'erreur pour la gérer dans handleCardClick
+      throw error;
     }
   };
 
   const handleCardClick = async (card) => {
-    if (!firstName1 || !firstName2) {
-      setShowSetupModal(true);
+    // Vérifier qu'il y a au moins 2 joueurs
+    const playersList = players && players.length > 0 ? players : [firstName1, firstName2].filter(p => p);
+    if (playersList.length < 2) {
+      openModal();
       return;
     }
 
     if (clickedCard) return;
 
-    console.log(`Card clicked: ${card}`);
+    logger.log(`Card clicked: ${card}`);
+    
+    // Démarrer l'animation immédiatement au clic
+    setClickedCard(card);
+    const isLeftCard = card === 'left';
+    const selectedCardRef = isLeftCard ? leftCardRef : rightCardRef;
+    const otherCardRef = isLeftCard ? rightCardRef : leftCardRef;
+    animateCardSelection(selectedCardRef, otherCardRef, isLeftCard);
+
+    // Faire la requête API en parallèle
     try {
       let randomText = '';
 
@@ -353,222 +298,59 @@ const ActionVerite = () => {
         randomText = await fetchRandomActionOrTruth('truth', currentPlayer);
       } else {
         randomText = await fetchRandomActionOrTruth('dare', currentPlayer);
-        if (intensity === 'low' || intensity === 'medium') {
-          setDareClickCount(prevCount => {
-            const newCount = prevCount + 1;
-            console.log(`Dare click count: ${newCount}`);
-            return newCount;
-          });
+        // Incrémenter le compteur de dare (seulement en low/medium, pas en high)
+        if (intensityProgression.intensity !== INTENSITY_LEVELS.HIGH) {
+          intensityProgression.incrementDareCount();
         }
       }
 
+      // Mettre à jour le texte une fois la requête terminée
       setRandomText(randomText);
-      setClickedCard(card);
-
-      if (card === 'left') {
-        gsap.to(leftCardRef.current, { duration: 0.8, x: 0, y: 0, rotation: 0, scale: 1 });
-        gsap.to(rightCardRef.current, { duration: 0.8, x: 1000, opacity: 0 });
-        setTimeout(() => {
-          gsap.to(leftCardRef.current.querySelector('.inner'), { rotationY: 180 });
-        }, 500);
-      } else {
-        gsap.to(rightCardRef.current, { duration: 0.8, x: 0, y: 0, rotation: 0, scale: 1 });
-        gsap.to(leftCardRef.current, { duration: 0.8, x: -1000, opacity: 0 });
-        setTimeout(() => {
-          gsap.to(rightCardRef.current.querySelector('.inner'), { rotationY: 180 });
-        }, 500);
-      }
+      
+      // Faire le flip maintenant que le texte est disponible
+      flipCard(selectedCardRef);
 
       if (duration) {
         setShowSkipButton(true);
       }
     } catch (error) {
-      console.error('Error handling card click:', error);
+      logger.error('Error handling card click:', error);
+      // En cas d'erreur, réinitialiser la carte
+      resetCards();
     }
   };
 
-  useEffect(() => {
-    if (dareClickCount >= 10 && intensity === 'low') {
-      console.log('Showing modal for Foreplay');
-      setShowModal(true);
-    } else if (dareClickCount >= 10 && intensity === 'medium') {
-      console.log('Showing modal for The Main Event');
-      setShowModalForeplay(true);
-    }
-  }, [dareClickCount, intensity]);
-
   const handleModalAccept = () => {
-    console.log('Modal accepted, increasing intensity');
-    if (intensity === 'low') {
-      setIntensity('medium');
-    } else if (intensity === 'medium') {
-      setIntensity('high');
-    }
+    intensityProgression.acceptUpgrade();
     resetCards();
-    setShowModal(false);
-    setShowModalForeplay(false);
-    setDareClickCount(0);
-    setDizaine(dizaine + 1);
-    console.log('Dare click count reset, dizaine incremented');
   };
 
   const handleModalDecline = () => {
-    console.log('Modal declined');
-    setShowModal(false);
-    setShowModalForeplay(false);
-    setDareClickCount(0);
-    setDizaine(dizaine + 1);
-    console.log('Dare click count reset, dizaine incremented');
+    intensityProgression.declineUpgrade();
   };
-
-  const handleModalSave = (formState) => {
-    setShowSetupModal(false);
-  };
-
 
   const resetCards = () => {
-    console.log('Resetting cards');
+    logger.log('Resetting cards');
     setClickedCard(null);
     setRandomText('');
     setDuration(null);
-    setRemainingTime(null);
-    setIsPaused(false);
-    setIsStarted(false);
     setShowSkipButton(false);
     setCurrentToys([]);
-    clearInterval(intervalRef.current);
-    setCurrentPlayer(prevPlayer => prevPlayer === firstName1 ? firstName2 : firstName1);
-
-    if (animationRef.current) {
-      animationRef.current.kill();
-      animationRef.current = null;
-    }
-    gsap.set(timerRectangleRef.current, { height: '0%' });
-
-    gsap.to(leftCardRef.current.querySelector('.inner'), { rotationY: 0 });
-    gsap.to(rightCardRef.current.querySelector('.inner'), { rotationY: 0 });
-    gsap.to(leftCardRef.current, { duration: 0.8, x: '-150px', rotation: -10, scale: 1, opacity: 1 });
-    gsap.to(rightCardRef.current, { duration: 0.8, x: '150px', rotation: 10, scale: 1, opacity: 1 });
-  };
-
-  const startTimer = () => {
-    if (!remainingTime || remainingTime <= 0) {
-      setRemainingTime(duration);
+    timer.reset();
+    
+    // Passer au joueur suivant dans la liste
+    if (players && players.length > 0) {
+      setCurrentPlayerIndex(prevIndex => (prevIndex + 1) % players.length);
+    } else if (firstName1 && firstName2) {
+      setCurrentPlayerIndex(prevIndex => (prevIndex + 1) % 2);
     }
 
-    console.log("Starting timer with duration:", duration);
-
-    clearInterval(intervalRef.current);
-    setIsStarted(true);
-    setIsPaused(false);
-
-    if (animationRef.current) {
-      animationRef.current.resume();
-    } else {
-      animationRef.current = gsap.to(timerRectangleRef.current, {
-        height: '100%',
-        duration: remainingTime,
-        ease: 'linear',
-        onComplete: () => {
-          console.log("Timer and animation complete.");
-          setIsStarted(false);
-          playSound();
-        },
-      }).play();
-    }
-
-    intervalRef.current = setInterval(() => {
-      setRemainingTime(prevTime => {
-        if (prevTime <= 1) {
-          clearInterval(intervalRef.current);
-          setIsPaused(true);
-          setIsStarted(false);
-          playSound();
-          console.log("Timer reached zero, interval cleared.");
-          return 0;
-        }
-        console.log("Timer ticking:", prevTime - 1);
-        return prevTime - 1;
-      });
-    }, 1000);
-  };
-
-  const resetAndStartTimer = () => {
-    console.log("Recommencer button clicked - resetting and starting timer");
-
-    clearInterval(intervalRef.current);
-    setRemainingTime(duration);
-    setIsPaused(false);
-    setIsStarted(true);
-
-    if (animationRef.current) {
-      animationRef.current.kill();
-      animationRef.current = null;
-    }
-
-    gsap.set(timerRectangleRef.current, { height: '0%' });
-
-    animationRef.current = gsap.to(timerRectangleRef.current, {
-        height: '100%',
-        duration: duration,
-        ease: 'linear',
-        onComplete: () => {
-          console.log("Timer and animation complete.");
-          setIsStarted(false);
-          playSound();
-        }
-    });
-
-    intervalRef.current = setInterval(() => {
-      setRemainingTime(prevTime => {
-        if (prevTime <= 1) {
-          clearInterval(intervalRef.current);
-          setIsPaused(true);
-          setIsStarted(false);
-          playSound();
-          console.log("Timer reached zero, interval cleared.");
-          return 0;
-        }
-        console.log("Timer ticking:", prevTime - 1);
-        return prevTime - 1;
-      });
-    }, 1000);
-  };
-
-  const handleTimerButtonClick = () => {
-    if (!isStarted) {
-      console.log("Starting timer");
-      startTimer();
-    } else if (isPaused) {
-      console.log("Resuming timer");
-      startTimer();
-    } else {
-      console.log("Pausing timer");
-      pauseTimer();
-    }
-  };
-
-  const pauseTimer = () => {
-    console.log("Pausing timer");
-    setIsPaused(true);
-    clearInterval(intervalRef.current);
-    if (animationRef.current) {
-      animationRef.current.pause();
-    }
+    resetCardPositions(leftCardRef, rightCardRef);
   };
 
   const handleSkipClick = () => {
-    console.log("Skipping to next player");
+    logger.log("Skipping to next player");
     resetCards();
-  };
-
-  const changeIntensity = () => {
-    console.log("Changing intensity");
-    setIntensity(prev => {
-      if (prev === 'low') return 'medium';
-      if (prev === 'medium') return 'high';
-      return 'low';
-    });
   };
 
   const formatTime = (seconds) => {
@@ -577,141 +359,103 @@ const ActionVerite = () => {
     return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
-  const playSound = () => {
-    console.log("Playing sound");
-    const audio = new Audio(timerSound);
-    audio.play();
-  };
-
   return (
-    <Container intensity={intensity}>
+    <Container>
+      <PageHeader />
       <CardsContainer>
-        <CardWrapper
-          ref={leftCardRef}
+        <TruthDareCard
+          cardRef={leftCardRef}
+          image={truthImage}
           onClick={() => handleCardClick('left')}
-        >
-          <CardInner className="inner">
-            <CardFront image={require('../images/junebaby.png')} />
-            <CardBack>
-              <Title>Truth & Dare</Title>
-              <CardText>
-                {clickedCard === 'left' && randomText 
-                  ? `${currentPlayer}, ${randomText}` 
-                  : currentPlayer}
-              </CardText>
-              {currentToys.length > 0 && (
-                <div>
-                  Jouets utilisés: 
-                  {currentToys.map(toy => (
-                    <ToyChip key={toy}>{toy}</ToyChip>
-                  ))}
-                </div>
-              )}
-              <Footer>LoveTogether</Footer>
-            </CardBack>
-          </CardInner>
-        </CardWrapper>
-        <CardWrapper
-          ref={rightCardRef}
+          isClicked={clickedCard === 'left'}
+          currentPlayer={currentPlayer}
+          randomText={randomText}
+          currentToys={currentToys}
+        />
+        <TruthDareCard
+          cardRef={rightCardRef}
+          image={dareImage}
           onClick={() => handleCardClick('right')}
-        >
-          <CardInner className="inner">
-            <CardFront image={require('../images/love.png')} />
-            <CardBack>
-              <Title>Truth & Dare</Title>
-              <CardText>
-                {clickedCard === 'right' && randomText 
-                  ? `${currentPlayer}, ${randomText}` 
-                  : currentPlayer}
-              </CardText>
-              {currentToys.length > 0 && (
-                <div>
-                  Jouets utilisés: 
-                  {currentToys.map(toy => (
-                    <ToyChip key={toy}>{toy}</ToyChip>
-                  ))}
-                </div>
-              )}
-              <Footer>LoveTogether</Footer>
-            </CardBack>
-          </CardInner>
-        </CardWrapper>
+          isClicked={clickedCard === 'right'}
+          currentPlayer={currentPlayer}
+          randomText={randomText}
+          currentToys={currentToys}
+        />
       </CardsContainer>
 
       <TimerRectangle ref={timerRectangleRef} />
 
       <ButtonContainer>
         {!clickedCard && (
-          <ButtonGroup>
+          <CombinedButton>
             <Button disabled>
               <span role="img" aria-label="Tour">👤</span> À ton tour, {currentPlayer}
             </Button>
-            <Button onClick={changeIntensity}>
-              Intensité ｜ {intensity === 'low' ? '👀  Warm-up' : intensity === 'medium' ? '🔥 Foreplay' : "🔞  The Main Event"}
+            <Divider />
+            <Button onClick={() => { playButtonSound(); intensityProgression.cycleIntensity(); }}>
+              Intensité ｜ {intensityProgression.currentConfig.label}
             </Button>
-          </ButtonGroup>
+          </CombinedButton>
         )}
 
         {clickedCard && (
           <>
-            <Button onClick={resetCards}>
-              <span role="img" aria-label="Tour">👤</span> Joueur suivant
-            </Button>
-
-            <div style={{ display: 'flex', flexDirection: 'row', gap: '12px' }}>
-              {duration && !isStarted && (
-                <TimerButton onClick={handleTimerButtonClick}>
-                  Lancer le timer
-                </TimerButton>
+            <CombinedButton>
+              <Button onClick={() => { playButtonSound(); resetCards(); }}>
+                <span role="img" aria-label="Tour">👤</span> Joueur suivant
+              </Button>
+              {duration && timer.isIdle && (
+                <>
+                  <Divider />
+                  <TimerButton onClick={() => { playButtonSound(); timer.toggle(); }}>
+                    Lancer le timer
+                  </TimerButton>
+                </>
               )}
-              {isStarted && (
-                <TimerButton onClick={handleTimerButtonClick}>
-                  {isPaused ? 'Reprendre' : `Pause (${formatTime(remainingTime)})`}
-                </TimerButton>
+              {(timer.isRunning || timer.isPaused) && (
+                <>
+                  <Divider />
+                  <TimerButton onClick={() => { playButtonSound(); timer.toggle(); }}>
+                    {timer.isPaused ? 'Reprendre' : `Pause (${formatTime(timer.remainingTime)})`}
+                  </TimerButton>
+                </>
               )}
-              {duration && isStarted && (
-                <RecommencerButton onClick={resetAndStartTimer}>
-                  Recommencer
-                </RecommencerButton>
+              {duration && !timer.isIdle && (
+                <>
+                  <Divider />
+                  <RecommencerButton onClick={() => { playButtonSound(); timer.restart(); }}>
+                    Recommencer
+                  </RecommencerButton>
+                </>
               )}
               {showSkipButton && (
-                <SkipButton onClick={handleSkipClick}>
-                  Skip
-                </SkipButton>
+                <>
+                  <Divider />
+                  <SkipButton onClick={() => { playButtonSound(); handleSkipClick(); }}>
+                    Skip
+                  </SkipButton>
+                </>
               )}
-            </div>
+            </CombinedButton>
           </>
         )}
       </ButtonContainer>
 
-      {showModal && (
+      {intensityProgression.showUpgradeModal && intensityProgression.intensity === INTENSITY_LEVELS.LOW && (
         <AVModal
-          dizaine={dizaine}
+          dizaine={intensityProgression.dizaine}
           onAccept={handleModalAccept}
           onDecline={handleModalDecline}
         />
       )}
 
-      {showModalForeplay && (
+      {intensityProgression.showUpgradeModal && intensityProgression.intensity === INTENSITY_LEVELS.MEDIUM && (
         <AVModalForeplay
-          dizaine={dizaine}
+          dizaine={intensityProgression.dizaine}
           onAccept={handleModalAccept}
           onDecline={handleModalDecline}
         />
       )}
-
-      {showSetupModal && (
-        <Modal 
-          isOpen={showSetupModal} 
-          onClose={() => setShowSetupModal(false)} 
-          onSave={handleModalSave} 
-        />
-      )}
-
-      <AddTruthOrDareModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-      />
 
       <GrainEffect />
     </Container>

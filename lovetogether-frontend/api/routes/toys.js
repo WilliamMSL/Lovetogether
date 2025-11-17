@@ -4,8 +4,8 @@ const Toy = require('../models/Toys');
 
 // Créer un jouet
 router.post('/', async (req, res) => {
-    const { name, name_id } = req.body;  // Assurez-vous que `name_id` est fourni
-    const toy = new Toy({ name, name_id });
+    const { name, name_id, category } = req.body;  // Assurez-vous que `name_id` est fourni
+    const toy = new Toy({ name, name_id, category });
     try {
         const savedToy = await toy.save();
         res.status(201).json(savedToy);
@@ -18,8 +18,10 @@ router.post('/', async (req, res) => {
 router.get('/', async (req, res) => {
     try {
         const toys = await Toy.find();
+        console.log(`Found ${toys.length} toys in database`);
         res.json(toys);
     } catch (err) {
+        console.error('Error fetching toys:', err);
         res.status(500).json({ message: err.message });
     }
 });

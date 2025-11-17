@@ -43,8 +43,14 @@ const FormSection = styled.div`
   flex: 1;
   padding: 48px;
   overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
   background-color: rgba(255, 255, 255, 1);
   display: flex;
+  
+  &::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
   flex-direction: column;
   justify-content: space-between;
 `;
