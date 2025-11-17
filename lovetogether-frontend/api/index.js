@@ -58,13 +58,21 @@ app.use('/api/truthordare', truthOrDareRoutes);
 app.use('/api/toys', toyRoutes);
 app.use('/api/roleplay', roleplayRoutes);
 
-// Fonction d'initialisation du serveur
-(async () => {
+// Variable globale pour stocker la connexion MongoDB
+let mongoConnection = null;
+let redisClient = null;
+
+// Fonction pour se connecter à MongoDB (lazy connection)
+async function connectToMongoDB() {
+  if (mongoConnection && mongoose.connection.readyState === 1) {
+    return mongoConnection;
+  }
+
   try {
     // Vérifiez que MONGODB_URI est défini
     if (!process.env.MONGODB_URI) {
       logger.error('MONGODB_URI n\'est pas défini dans les variables d\'environnement.');
-      process.exit(1); // Quitter l'application si MONGODB_URI n'est pas défini
+      throw new Error('MONGODB_URI n\'est pas défini');
     }
 
     // Connexion à MongoDB Atlas
@@ -72,106 +80,148 @@ app.use('/api/roleplay', roleplayRoutes);
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
     });
     logger.info('Connecté avec succès à MongoDB Atlas');
+    mongoConnection = mongoose.connection;
+    return mongoConnection;
+  } catch (error) {
+    logger.error('Erreur lors de la connexion à MongoDB:', error);
+    throw error;
+  }
+}
 
-    // Vérification de l'état de la connexion MongoDB
-    app.use((req, res, next) => {
-      if (mongoose.connection.readyState !== 1) {
-        logger.error('La connexion MongoDB n\'est pas prête. État actuel :', mongoose.connection.readyState);
-        return res.status(500).json({ error: 'La connexion à la base de données n\'est pas prête' });
-      }
-      next();
+// Fonction pour se connecter à Redis (lazy connection)
+async function connectToRedis() {
+  if (redisClient && redisClient.isOpen) {
+    return redisClient;
+  }
+
+  if (!process.env.REDIS_URL) {
+    logger.info('REDIS_URL non défini, Redis désactivé');
+    return null;
+  }
+
+  try {
+    logger.info('Initialisation du client Redis...');
+    redisClient = redis.createClient({
+      url: process.env.REDIS_URL,
     });
 
-    // Initialisation de Redis (optionnel)
-    let redisClient = null;
-    if (process.env.REDIS_URL) {
-      try {
-        logger.info('Initialisation du client Redis...');
-        redisClient = redis.createClient({
-          url: process.env.REDIS_URL,
-        });
+    await redisClient.connect();
+    logger.info('Connecté avec succès à Redis');
+    return redisClient;
+  } catch (redisError) {
+    logger.warn('Erreur lors de la connexion à Redis, continuation sans Redis:', redisError.message);
+    return null;
+  }
+}
 
-        await redisClient.connect();
-        logger.info('Connecté avec succès à Redis');
-
-        // Mise à disposition du client Redis dans l'application
-        app.set('redisClient', redisClient);
-      } catch (redisError) {
-        logger.warn('Erreur lors de la connexion à Redis, continuation sans Redis:', redisError.message);
-        redisClient = null;
-      }
-    } else {
-      logger.info('REDIS_URL non défini, Redis désactivé');
+// Middleware pour s'assurer que MongoDB est connecté avant chaque requête
+app.use(async (req, res, next) => {
+  try {
+    await connectToMongoDB();
+    
+    // Vérification de l'état de la connexion MongoDB
+    if (mongoose.connection.readyState !== 1) {
+      logger.error('La connexion MongoDB n\'est pas prête. État actuel :', mongoose.connection.readyState);
+      return res.status(500).json({ error: 'La connexion à la base de données n\'est pas prête' });
     }
 
-    // Route de test API
-    app.get('/api/test', (req, res) => {
-      logger.info('Route API de test appelée');
-      res.json({ message: 'L\'API fonctionne', timestamp: new Date().toISOString() });
-    });
+    // Connecter Redis si nécessaire
+    const redis = await connectToRedis();
+    if (redis) {
+      req.redisClient = redis;
+    }
 
-    // Catch-all route pour l'API
-    app.use('/api/*', (req, res) => {
-      logger.warn('Route API non trouvée :', req.originalUrl);
-      res.status(404).json({ message: 'Route API non trouvée', path: req.originalUrl });
-    });
-
-    // Middleware d'erreur global
-    app.use((err, req, res, next) => {
-      logger.error('Gestionnaire d\'erreur global :', err);
-
-      if (res.headersSent) {
-        return next(err);
-      }
-
-      const statusCode = err.statusCode || 500;
-      res.status(statusCode).json({
-        message: err.message,
-        ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
-      });
-    });
-
-    // Démarrage du serveur
-    const PORT = process.env.PORT || 1812;
-    app.listen(PORT, () => {
-      logger.info(`Serveur en cours d'exécution sur le port ${PORT}`);
-      logger.debug('Variables d\'environnement :');
-      logger.debug('MONGODB_URI est définie :', !!process.env.MONGODB_URI);
-      logger.debug('REDIS_URL est définie :', !!process.env.REDIS_URL);
-      logger.debug('NODE_ENV :', process.env.NODE_ENV);
-    });
-
-    // Gestion des erreurs non capturées
-    process.on('unhandledRejection', (reason, promise) => {
-      logger.error('Rejet non géré à :', promise, 'raison :', reason);
-    });
-
-    // Gestion de la fermeture gracieuse
-    const gracefulShutdown = async () => {
-      logger.info('Fermeture gracieuse en cours...');
-      try {
-        await redisClient.quit();
-        await mongoose.connection.close();
-        logger.info('Connexions fermées avec succès');
-        process.exit(0);
-      } catch (err) {
-        logger.error('Erreur lors de la fermeture gracieuse :', err);
-        process.exit(1);
-      }
-    };
-
-    process.on('SIGINT', gracefulShutdown);
-    process.on('SIGTERM', gracefulShutdown);
-
-  } catch (err) {
-    logger.error('Erreur lors de l\'initialisation du serveur :', err);
-    process.exit(1);
+    next();
+  } catch (error) {
+    logger.error('Erreur lors de la connexion à la base de données:', error);
+    return res.status(500).json({ error: 'Erreur de connexion à la base de données', message: error.message });
   }
-})();
+});
 
-// Exportation de l'application pour les tests ou l'utilisation externe
+// Route de test API
+app.get('/api/test', (req, res) => {
+  logger.info('Route API de test appelée');
+  res.json({ 
+    message: 'L\'API fonctionne', 
+    timestamp: new Date().toISOString(),
+    mongoStatus: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+  });
+});
+
+// Catch-all route pour l'API
+app.use('/api/*', (req, res) => {
+  logger.warn('Route API non trouvée :', req.originalUrl);
+  res.status(404).json({ message: 'Route API non trouvée', path: req.originalUrl });
+});
+
+// Middleware d'erreur global
+app.use((err, req, res, next) => {
+  logger.error('Gestionnaire d\'erreur global :', err);
+
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  const statusCode = err.statusCode || 500;
+  res.status(statusCode).json({
+    message: err.message,
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+  });
+});
+
+// Pour Vercel serverless functions, exporter un handler
 module.exports = app;
+
+// Pour le développement local, démarrer le serveur
+if (require.main === module) {
+  (async () => {
+    try {
+      await connectToMongoDB();
+      await connectToRedis();
+
+      // Démarrage du serveur
+      const PORT = process.env.PORT || 1812;
+      app.listen(PORT, () => {
+        logger.info(`Serveur en cours d'exécution sur le port ${PORT}`);
+        logger.debug('Variables d\'environnement :');
+        logger.debug('MONGODB_URI est définie :', !!process.env.MONGODB_URI);
+        logger.debug('REDIS_URL est définie :', !!process.env.REDIS_URL);
+        logger.debug('NODE_ENV :', process.env.NODE_ENV);
+      });
+
+      // Gestion des erreurs non capturées
+      process.on('unhandledRejection', (reason, promise) => {
+        logger.error('Rejet non géré à :', promise, 'raison :', reason);
+      });
+
+      // Gestion de la fermeture gracieuse
+      const gracefulShutdown = async () => {
+        logger.info('Fermeture gracieuse en cours...');
+        try {
+          if (redisClient && redisClient.isOpen) {
+            await redisClient.quit();
+          }
+          if (mongoose.connection.readyState === 1) {
+            await mongoose.connection.close();
+          }
+          logger.info('Connexions fermées avec succès');
+          process.exit(0);
+        } catch (err) {
+          logger.error('Erreur lors de la fermeture gracieuse :', err);
+          process.exit(1);
+        }
+      };
+
+      process.on('SIGINT', gracefulShutdown);
+      process.on('SIGTERM', gracefulShutdown);
+
+    } catch (err) {
+      logger.error('Erreur lors de l\'initialisation du serveur :', err);
+      process.exit(1);
+    }
+  })();
+}
