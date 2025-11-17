@@ -17,7 +17,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-logger.log('Supabase client initialized');
+// Supabase client initialized - logs removed for security
 
 // Export des fonctions utilitaires pour les buckets si nécessaire
 export const getBucket = (bucketName) => {

@@ -8,7 +8,7 @@ import backgroundCard1 from '../images/backgrounds/background-card-1.png';
 import useButtonSound from '../hooks/useButtonSound';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:1812';
-console.log('API Base URL:', API_BASE_URL);
+// API Base URL log removed for security
 
 const PageContainer = styled.div`
   display: flex;
@@ -159,9 +159,7 @@ const Roleplay = () => {
     try {
       setError(null);
       setIsLoading(true);
-      console.log('Fetching roleplay from:', `${API_BASE_URL}/api/roleplay/random`);
       const response = await axios.get(`${API_BASE_URL}/api/roleplay/random`);
-      console.log('Roleplay response:', response.data);
       setRoleplay(response.data);
     } catch (error) {
       console.error('Erreur lors de la récupération du roleplay:', error);

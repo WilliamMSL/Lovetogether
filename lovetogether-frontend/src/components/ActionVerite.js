@@ -17,6 +17,7 @@ import logger from '../utils/logger';
 import { API_BASE_URL, API_ENDPOINTS } from '../constants/api';
 import { INTENSITY_LEVELS } from '../constants/intensityLevels';
 import { useSettingsModal } from '../contexts/SettingsModalContext';
+import { useUsersModal } from '../contexts/UsersModalContext';
 
 const buildPlayerParams = (player, playersList) => {
   // Trouver l'index du joueur actuel
@@ -69,7 +70,7 @@ const formatTemplate = (template, player, otherPlayer) => {
     .replace(/{AutrePlayer}/gi, otherPlayer);
 };
 
-logger.log('API Base URL:', API_BASE_URL);
+// API Base URL log removed for security
 
 const Container = styled.div`
   display: flex;
@@ -108,6 +109,36 @@ const ButtonContainer = styled.div`
   width: 100%;
   z-index: 5;
   align-items: center;
+`;
+
+const RedLightEffect = styled.div`
+  position: absolute;
+  bottom: -150px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(255, 0, 0, 0.6) 0%, rgba(255, 0, 0, 0.3) 40%, transparent 70%);
+  filter: blur(60px);
+  z-index: 4;
+  pointer-events: none;
+  opacity: ${props => props.show ? 1 : 0};
+  transition: opacity 0.5s ease;
+`;
+
+const DarkRedLightEffect = styled.div`
+  position: absolute;
+  bottom: -150px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(200, 0, 0, 0.8) 0%, rgba(180, 0, 0, 0.5) 40%, transparent 70%);
+  filter: blur(60px);
+  z-index: 4;
+  pointer-events: none;
+  opacity: ${props => props.show ? 1 : 0};
+  transition: opacity 0.5s ease;
 `;
 
 const CombinedButton = styled.div`
@@ -207,6 +238,7 @@ const ActionVerite = () => {
   const timer = useTimer(duration, timerRectangleRef);
   const intensityProgression = useIntensityProgression();
   const { openModal } = useSettingsModal();
+  const { openUsersModal } = useUsersModal();
   const playButtonSound = useButtonSound();
 
   useEffect(() => {
@@ -237,14 +269,13 @@ const ActionVerite = () => {
       });
 
       logger.log("Toys parameter for request:", toysParam);
-      logger.log('Fetching from:', `${API_BASE_URL}${API_ENDPOINTS.TRUTH_OR_DARE}`);
-      logger.log('Request params:', params);
+      // API request logs removed for security
 
       const response = await axios.get(`${API_BASE_URL}${API_ENDPOINTS.TRUTH_OR_DARE}`, {
         params,
       });
 
-      logger.log('Full API Response:', response.data);
+      // API response log removed for security
 
       if (response.data && response.data.template) {
         const { template, duration, toys } = response.data;
@@ -272,10 +303,15 @@ const ActionVerite = () => {
   };
 
   const handleCardClick = async (card) => {
-    // Vérifier qu'il y a au moins 2 joueurs
+    // Vérifier qu'il y a au moins 1 joueur
     const playersList = players && players.length > 0 ? players : [firstName1, firstName2].filter(p => p);
+    if (playersList.length === 0) {
+      openUsersModal();
+      return;
+    }
+    // Vérifier qu'il y a au moins 2 joueurs pour jouer
     if (playersList.length < 2) {
-      openModal();
+      openUsersModal();
       return;
     }
 
@@ -384,6 +420,9 @@ const ActionVerite = () => {
       </CardsContainer>
 
       <TimerRectangle ref={timerRectangleRef} />
+
+      <RedLightEffect show={intensityProgression.intensity === INTENSITY_LEVELS.MEDIUM} />
+      <DarkRedLightEffect show={intensityProgression.intensity === INTENSITY_LEVELS.HIGH} />
 
       <ButtonContainer>
         {!clickedCard && (

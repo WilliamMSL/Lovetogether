@@ -1,9 +1,8 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useContext } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import CardsWrapper from './CardsWrapper';
 import { useCard } from './CardContext';
-import gsap from 'gsap';
 import GrainEffect from './GrainEffect';
 import HeaderButton from './HeaderButton';
 import { ReactComponent as UserIcon } from '../images/assets/icons/user.svg';
@@ -11,6 +10,7 @@ import { ReactComponent as SlidersIcon } from '../images/assets/icons/sliders.sv
 import { ReactComponent as XIcon } from '../images/assets/icons/x-square.svg';
 import { useSettingsModal } from '../contexts/SettingsModalContext';
 import { useUsersModal } from '../contexts/UsersModalContext';
+import { UserContext } from './UserContext';
 
 // Import des images
 import whiteLogoSvg from '../images/logo-5.svg';
@@ -77,6 +77,44 @@ const HeaderButtonsContainer = styled.div`
   pointer-events: auto;
 `;
 
+const SettingsButtonWrapper = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+`;
+
+const Tooltip = styled.div`
+  position: absolute;
+  bottom: -45px;
+  right: 0;
+  transform: translateX(0);
+  background-color: #000000;
+  color: #FFFFFF;
+  padding: 8px 12px;
+  border-radius: 14px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  z-index: 1001;
+  pointer-events: none;
+  opacity: ${props => props.show ? 1 : 0};
+  transition: opacity 0.2s ease;
+  
+  &:after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    right: 20px;
+    transform: translateX(0);
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 4px solid #000000;
+  }
+`;
+
 const StaticLogo = styled.div`
   width: 100%;
   height: auto;
@@ -111,84 +149,6 @@ const GrainContainer = styled.div`
   z-index: 0;
 `;
 
-const OverlayContainer = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 10000000000000;
-  pointer-events: none;
-`;
-
-const ButtonContainer = styled.div`
-  position: absolute;
-  top: 70%;
-  pointer-events: auto;
-  z-index: 2000;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 15px;
-`;
-
-const QuestionText = styled.div`
-  font-size: 18px;
-  font-weight: 600;
-  color: #000;
-  margin-bottom: 10px;
-  font-family: 'Poppins', sans-serif;
-  text-align: center;
-`;
-
-const ButtonsWrapper = styled.div`
-  display: flex;
-  gap: 15px;
-`;
-
-const Button = styled.button`
-  padding: 12px 30px;
-  font-size: 16px;
-  font-weight: 600;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-family: 'Poppins', sans-serif;
-  transition: all 0.2s;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-
-  &.yes {
-    background: #191919;
-    &:hover {
-      background: #2d2d2d;
-      transform: translateY(-2px);
-    }
-  }
-
-  &.no {
-    background: #EF4136;
-    &:hover {
-      background: #d6362a;
-      transform: translateY(-2px);
-    }
-  }
-`;
-
-const WhiteOverlay = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1500;
-  pointer-events: none;
-  opacity: 1;
-  transition: opacity 1s ease;
-`;
 
 const BottomButtonContainer = styled.div`
   position: absolute;
@@ -233,91 +193,18 @@ const MainContent = () => {
   const { resetCards } = useCard();
   const { openModal } = useSettingsModal();
   const { openUsersModal } = useUsersModal();
-  const [cardsOpacity, setCardsOpacity] = useState(0);
-  const [isAnimated, setIsAnimated] = useState(false);
-  const [cardsClickable, setCardsClickable] = useState(false);
+  const { selectedToys } = useContext(UserContext);
+  const [cardsOpacity, setCardsOpacity] = useState(1);
+  const [isAnimated, setIsAnimated] = useState(true);
+  const [cardsClickable, setCardsClickable] = useState(true);
   const [logoSrc, setLogoSrc] = useState(whiteLogoSvg);
   const [showBackgroundImage, setShowBackgroundImage] = useState(false);
-  const [showNavbar, setShowNavbar] = useState(false);
-  const [hasAcceptedAge, setHasAcceptedAge] = useState(() => {
-    return localStorage.getItem('hasAcceptedAge') === 'true';
-  });
+  const [showNavbar, setShowNavbar] = useState(true);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [hoveredCardLabel, setHoveredCardLabel] = useState(null);
   const cardsRef = useRef(null);
-  const overlayRef = useRef(null);
-  const buttonRef = useRef(null);
   
   const isHomePage = location.pathname === '/';
-
-  const handleAgeVerification = (accepted) => {
-    if (!accepted) {
-      // Rediriger vers Google.fr si l'utilisateur n'est pas majeur
-      window.location.href = 'https://www.google.fr';
-      return;
-    }
-
-    // Sauvegarder dans localStorage que l'utilisateur a accepté
-    localStorage.setItem('hasAcceptedAge', 'true');
-    setHasAcceptedAge(true);
-
-    gsap.to(buttonRef.current, {
-      duration: 1.5,
-      ease: 'power2.in',
-    });
-
-    gsap.to([overlayRef.current, buttonRef.current], {
-      duration: 1,
-      opacity: 0,
-      ease: 'power2.out',
-      onComplete: () => {
-        if (overlayRef.current) {
-          overlayRef.current.style.display = 'none';
-          overlayRef.current.style.pointerEvents = 'none';
-        }
-        if (buttonRef.current) {
-          buttonRef.current.style.pointerEvents = 'none';
-        }
-        setIsAnimated(true);
-        setCardsOpacity(1);
-        setShowNavbar(true);
-
-        if (cardsRef.current) {
-          gsap.to(cardsRef.current, {
-            opacity: 1,
-            y: 0,
-            duration: 0.8,
-            ease: 'power2.out',
-            delay: 0.1,
-            onComplete: () => {
-              setCardsClickable(true);
-            },
-          });
-        }
-      },
-    });
-  };
-
-  // Si l'utilisateur a déjà accepté, afficher directement le contenu
-  useEffect(() => {
-    if (hasAcceptedAge) {
-      setIsAnimated(true);
-      setCardsOpacity(1);
-      setShowNavbar(true);
-      setCardsClickable(true);
-      if (overlayRef.current) {
-        overlayRef.current.style.display = 'none';
-        overlayRef.current.style.pointerEvents = 'none';
-      }
-      if (buttonRef.current) {
-        buttonRef.current.style.display = 'none';
-        buttonRef.current.style.pointerEvents = 'none';
-      }
-      if (cardsRef.current) {
-        gsap.set(cardsRef.current, { opacity: 1, y: 0 });
-      }
-    }
-  }, [hasAcceptedAge]);
 
 
 
@@ -350,11 +237,16 @@ const MainContent = () => {
               onClick={openUsersModal} 
               aria-label="Joueurs"
             />
-            <HeaderButton 
-              icon={<SlidersIcon />} 
-              onClick={openModal} 
-              aria-label="Paramètres"
-            />
+            <SettingsButtonWrapper>
+              <HeaderButton 
+                icon={<SlidersIcon />} 
+                onClick={openModal} 
+                aria-label="Paramètres"
+              />
+              <Tooltip show={!selectedToys || selectedToys.length === 0}>
+                Sélectionnez des jouets
+              </Tooltip>
+            </SettingsButtonWrapper>
             {showBackgroundImage && (
               <HeaderButton 
                 icon={<XIcon />} 
@@ -372,7 +264,7 @@ const MainContent = () => {
       {isHomePage && (
         <CardsContainer
           ref={cardsRef}
-          opacity={hasAcceptedAge ? cardsOpacity : 0}
+          opacity={cardsOpacity}
           isAnimated={isAnimated}
           clickable={cardsClickable}
         >
@@ -392,24 +284,6 @@ const MainContent = () => {
         </CardsContainer>
       )}
 
-      {!hasAcceptedAge && (
-        <>
-          <WhiteOverlay ref={overlayRef} />
-          <OverlayContainer>
-            <ButtonContainer ref={buttonRef}>
-              <QuestionText>Je suis majeur ?</QuestionText>
-              <ButtonsWrapper>
-                <Button className="yes" onClick={() => handleAgeVerification(true)}>
-                  Oui
-                </Button>
-                <Button className="no" onClick={() => handleAgeVerification(false)}>
-                  Non
-                </Button>
-              </ButtonsWrapper>
-            </ButtonContainer>
-          </OverlayContainer>
-        </>
-      )}
     </BackgroundContainer>
   );
 };

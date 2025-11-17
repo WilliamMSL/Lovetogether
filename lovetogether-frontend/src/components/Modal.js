@@ -11,7 +11,7 @@ import backgroundCard1 from '../images/backgrounds/background-card-1.png';
 import useButtonSound from '../hooks/useButtonSound';
 
 // Définir l'URL de base de l'API
-logger.log('API Base URL:', API_BASE_URL);
+// API Base URL log removed for security
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -426,7 +426,6 @@ const Modal = ({ isOpen, onClose, onSave }) => {
       setToysError(null);
       
       try {
-        logger.log('Fetching toys from:', `${API_BASE_URL}/api/toys`);
         const response = await fetch(`${API_BASE_URL}/api/toys`);
         
         if (!response.ok) {

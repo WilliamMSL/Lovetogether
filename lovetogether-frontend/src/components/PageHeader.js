@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import HeaderButton from './HeaderButton';
@@ -6,6 +6,7 @@ import { ReactComponent as UserIcon } from '../images/assets/icons/user.svg';
 import { ReactComponent as SlidersIcon } from '../images/assets/icons/sliders.svg';
 import { useSettingsModal } from '../contexts/SettingsModalContext';
 import { useUsersModal } from '../contexts/UsersModalContext';
+import { UserContext } from './UserContext';
 import LoveTogetherLogo from '../images/LoveTogether_logo.svg';
 
 const HeaderContainer = styled.div`
@@ -44,14 +45,55 @@ const HeaderButtonsContainer = styled.div`
   pointer-events: auto;
 `;
 
+const SettingsButtonWrapper = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+`;
+
+const Tooltip = styled.div`
+  position: absolute;
+  bottom: -45px;
+  right: 0;
+  transform: translateX(0);
+  background-color: #000000;
+  color: #FFFFFF;
+  padding: 8px 12px;
+  border-radius: 14px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  z-index: 1001;
+  pointer-events: none;
+  opacity: ${props => props.show ? 1 : 0};
+  transition: opacity 0.2s ease;
+  
+  &:after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    right: 20px;
+    transform: translateX(0);
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 4px solid #000000;
+  }
+`;
+
 const PageHeader = () => {
   const { openModal } = useSettingsModal();
   const { openUsersModal } = useUsersModal();
+  const { selectedToys } = useContext(UserContext);
   const navigate = useNavigate();
 
   const handleLogoClick = () => {
     navigate('/');
   };
+
+  const hasNoToys = !selectedToys || selectedToys.length === 0;
 
   return (
     <HeaderContainer>
@@ -64,11 +106,16 @@ const PageHeader = () => {
           onClick={openUsersModal} 
           aria-label="Joueurs"
         />
-        <HeaderButton 
-          icon={<SlidersIcon />} 
-          onClick={openModal} 
-          aria-label="Paramètres"
-        />
+        <SettingsButtonWrapper>
+          <HeaderButton 
+            icon={<SlidersIcon />} 
+            onClick={openModal} 
+            aria-label="Paramètres"
+          />
+          <Tooltip show={hasNoToys}>
+            Sélectionnez des jouets
+          </Tooltip>
+        </SettingsButtonWrapper>
       </HeaderButtonsContainer>
     </HeaderContainer>
   );

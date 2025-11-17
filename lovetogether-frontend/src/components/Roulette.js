@@ -11,7 +11,8 @@ import dareImage from '../images/love.png';
 import truthImage from '../images/junebaby.png';
 import { API_BASE_URL, API_ENDPOINTS } from '../constants/api';
 import logger from '../utils/logger';
-import { ReactComponent as XIcon } from '../images/assets/icons/x-square.svg';
+import { ReactComponent as XIcon } from '../images/assets/icons/x.svg';
+import { useUsersModal } from '../contexts/UsersModalContext';
 import background1 from '../images/backgrounds/background-1.png';
 import background2 from '../images/backgrounds/background-2.png';
 import background3 from '../images/backgrounds/background-3.png';
@@ -160,30 +161,33 @@ const CloseButton = styled.button`
   position: absolute;
   top: 48px;
   right: 48px;
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: white;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: 12px;
+  background: #FFFFFF;
+  border: none;
+  border-radius: 14px;
   cursor: pointer;
   z-index: 10000000 !important;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease, background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-
+  padding: 0;
+  transition: all 0.2s ease;
+  
   &:hover {
-    background-color: #fff5f5;
-    color: #ff4500;
-    border-color: #ff4500;
-    box-shadow: 0 6px 12px rgba(255, 69, 0, 0.3);
+    background-color: #F3F3F3;
     transform: scale(1.05);
   }
-
+  
+  &:active {
+    transform: scale(0.95);
+  }
+  
   svg {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
+    color: #000000;
+    stroke: #000000;
   }
 `;
 
@@ -335,6 +339,7 @@ const Roulette = () => {
   
   // Son pour les boutons
   const playButtonSound = useButtonSound();
+  const { openUsersModal } = useUsersModal();
   
   // Liste des emojis pour l'animation
   const emojis = ['🍒', '🎰', '🤗', '💋', '👄', '❤️', '💕', '🔥', '✨', '💖'];
@@ -579,14 +584,13 @@ const Roulette = () => {
         toysParam 
       });
 
-      logger.log('Fetching action from:', `${API_BASE_URL}${API_ENDPOINTS.TRUTH_OR_DARE}`);
-      logger.log('Request params:', params);
+      // API request logs removed for security
 
       const response = await axios.get(`${API_BASE_URL}${API_ENDPOINTS.TRUTH_OR_DARE}`, {
         params,
       });
 
-      logger.log('API Response:', response.data);
+      // API response log removed for security
 
       if (response.data && response.data.template) {
         const { template } = response.data;
@@ -612,6 +616,13 @@ const Roulette = () => {
 
   const spin = async () => {
     if (isSpinning) return;
+
+    // Vérifier qu'il y a au moins 1 joueur
+    const playersList = players && players.length > 0 ? players : [firstName1, firstName2].filter(p => p);
+    if (playersList.length === 0) {
+      openUsersModal();
+      return;
+    }
 
     setIsSpinning(true);
     setShowCard(false);
