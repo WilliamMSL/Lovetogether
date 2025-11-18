@@ -137,59 +137,102 @@ async function connectToRedis() {
 
   // Si une connexion est en cours, attendre qu'elle se termine
   if (!cachedRedis.promise) {
-    try {
-      logger.info('Initialisation du client Redis...');
-      const client = redis.createClient({
-        url: process.env.REDIS_URL,
-      });
+    logger.info('Initialisation du client Redis...');
+    const client = redis.createClient({
+      url: process.env.REDIS_URL,
+      socket: {
+        connectTimeout: 2000, // Timeout de connexion à 2 secondes
+        reconnectStrategy: false, // Ne pas reconnecter automatiquement en serverless
+      },
+    });
 
-      cachedRedis.promise = client.connect().then(() => {
+    // Gérer les erreurs de connexion
+    client.on('error', (err) => {
+      logger.warn('Erreur Redis:', err.message);
+      cachedRedis.promise = null;
+      cachedRedis.client = null;
+    });
+
+    cachedRedis.promise = client.connect()
+      .then(() => {
         logger.info('Connecté avec succès à Redis');
         cachedRedis.client = client;
         return client;
+      })
+      .catch((redisError) => {
+        logger.warn('Erreur lors de la connexion à Redis:', redisError.message);
+        cachedRedis.promise = null;
+        cachedRedis.client = null;
+        throw redisError;
       });
-    } catch (redisError) {
-      cachedRedis.promise = null;
-      logger.warn('Erreur lors de la connexion à Redis, continuation sans Redis:', redisError.message);
-      return null;
-    }
   }
 
   try {
     await cachedRedis.promise;
+    return cachedRedis.client;
   } catch (e) {
     cachedRedis.promise = null;
+    cachedRedis.client = null;
+    logger.warn('Connexion Redis échouée, continuation sans Redis');
     return null;
   }
-
-  return cachedRedis.client;
 }
 
 // Middleware pour s'assurer que MongoDB est connecté avant chaque requête
 app.use(async (req, res, next) => {
+  // Timeout global de 8 secondes pour éviter le timeout Vercel (10s)
+  const timeout = setTimeout(() => {
+    if (!res.headersSent) {
+      logger.error('Timeout du middleware');
+      return res.status(504).json({ 
+        error: 'Gateway Timeout',
+        message: 'La requête a pris trop de temps'
+      });
+    }
+  }, 8000);
+
   try {
     await connectToMongoDB();
     
     // Vérification de l'état de la connexion MongoDB
     if (mongoose.connection.readyState !== 1) {
+      clearTimeout(timeout);
       logger.error('La connexion MongoDB n\'est pas prête. État actuel :', mongoose.connection.readyState);
       return res.status(500).json({ error: 'La connexion à la base de données n\'est pas prête' });
     }
 
-    // Connecter Redis si nécessaire
-    const redis = await connectToRedis();
-    if (redis) {
-      req.redisClient = redis;
-      // Aussi mettre dans app pour compatibilité avec l'ancien code
-      if (!app.get('redisClient')) {
-        app.set('redisClient', redis);
+    // Connecter Redis si nécessaire (avec timeout pour ne pas bloquer)
+    // Redis n'est pas critique - utilisé uniquement pour éviter les répétitions dans truthordare
+    try {
+      const redisPromise = connectToRedis();
+      const redisTimeout = new Promise((resolve) => setTimeout(() => resolve(null), 2000)); // Timeout à 2 secondes
+      
+      const redisClient = await Promise.race([redisPromise, redisTimeout]);
+      
+      if (redisClient) {
+        req.redisClient = redisClient;
+        // Aussi mettre dans app pour compatibilité avec l'ancien code
+        if (!app.get('redisClient')) {
+          app.set('redisClient', redisClient);
+        }
       }
+    } catch (redisError) {
+      // Continue sans Redis - ne pas bloquer la requête
+      logger.warn('Redis non disponible, continuation sans Redis:', redisError.message);
     }
 
+    clearTimeout(timeout);
     next();
   } catch (error) {
+    clearTimeout(timeout);
     logger.error('Erreur lors de la connexion à la base de données:', error);
-    return res.status(500).json({ error: 'Erreur de connexion à la base de données', message: error.message });
+    
+    if (!res.headersSent) {
+      return res.status(500).json({ 
+        error: 'Erreur de connexion à la base de données', 
+        message: error.message 
+      });
+    }
   }
 });
 
