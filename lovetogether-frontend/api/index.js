@@ -58,64 +58,111 @@ app.use('/api/truthordare', truthOrDareRoutes);
 app.use('/api/toys', toyRoutes);
 app.use('/api/roleplay', roleplayRoutes);
 
-// Variable globale pour stocker la connexion MongoDB
-let mongoConnection = null;
-let redisClient = null;
+// Pattern singleton pour réutiliser la connexion MongoDB dans un environnement serverless
+// Utilise global pour persister la connexion entre les invocations de fonction
+let cached = global.mongoose;
 
-// Fonction pour se connecter à MongoDB (lazy connection)
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
+
+// Fonction pour se connecter à MongoDB (lazy connection avec cache global)
 async function connectToMongoDB() {
-  if (mongoConnection && mongoose.connection.readyState === 1) {
-    return mongoConnection;
+  // Si déjà connecté, retourner la connexion existante
+  if (cached.conn && mongoose.connection.readyState === 1) {
+    logger.debug('Réutilisation de la connexion MongoDB existante');
+    return cached.conn;
+  }
+
+  // Si une connexion est en cours, attendre qu'elle se termine
+  if (!cached.promise) {
+    try {
+      // Vérifiez que MONGODB_URI est défini
+      if (!process.env.MONGODB_URI) {
+        logger.error('MONGODB_URI n\'est pas défini dans les variables d\'environnement.');
+        throw new Error('MONGODB_URI n\'est pas défini');
+      }
+
+      // Connexion à MongoDB Atlas
+      logger.info('Connexion à MongoDB Atlas...');
+      const opts = {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+        serverSelectionTimeoutMS: 10000,
+        socketTimeoutMS: 45000,
+        maxPoolSize: 10, // Limiter le nombre de connexions
+      };
+
+      cached.promise = mongoose.connect(process.env.MONGODB_URI, opts).then((mongoose) => {
+        logger.info('Connecté avec succès à MongoDB Atlas');
+        cached.conn = mongoose.connection;
+        return mongoose.connection;
+      });
+    } catch (error) {
+      cached.promise = null;
+      logger.error('Erreur lors de la connexion à MongoDB:', error);
+      throw error;
+    }
   }
 
   try {
-    // Vérifiez que MONGODB_URI est défini
-    if (!process.env.MONGODB_URI) {
-      logger.error('MONGODB_URI n\'est pas défini dans les variables d\'environnement.');
-      throw new Error('MONGODB_URI n\'est pas défini');
-    }
-
-    // Connexion à MongoDB Atlas
-    logger.info('Connexion à MongoDB Atlas...');
-    await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 10000,
-      socketTimeoutMS: 45000,
-    });
-    logger.info('Connecté avec succès à MongoDB Atlas');
-    mongoConnection = mongoose.connection;
-    return mongoConnection;
-  } catch (error) {
-    logger.error('Erreur lors de la connexion à MongoDB:', error);
-    throw error;
+    await cached.promise;
+  } catch (e) {
+    cached.promise = null;
+    throw e;
   }
+
+  return cached.conn;
 }
 
-// Fonction pour se connecter à Redis (lazy connection)
-async function connectToRedis() {
-  if (redisClient && redisClient.isOpen) {
-    return redisClient;
-  }
+// Pattern singleton pour Redis (similaire à MongoDB)
+let cachedRedis = global.redisClient;
 
+if (!cachedRedis) {
+  cachedRedis = global.redisClient = { client: null, promise: null };
+}
+
+// Fonction pour se connecter à Redis (lazy connection avec cache global)
+async function connectToRedis() {
   if (!process.env.REDIS_URL) {
     logger.info('REDIS_URL non défini, Redis désactivé');
     return null;
   }
 
-  try {
-    logger.info('Initialisation du client Redis...');
-    redisClient = redis.createClient({
-      url: process.env.REDIS_URL,
-    });
+  // Si déjà connecté, retourner le client existant
+  if (cachedRedis.client && cachedRedis.client.isOpen) {
+    logger.debug('Réutilisation du client Redis existant');
+    return cachedRedis.client;
+  }
 
-    await redisClient.connect();
-    logger.info('Connecté avec succès à Redis');
-    return redisClient;
-  } catch (redisError) {
-    logger.warn('Erreur lors de la connexion à Redis, continuation sans Redis:', redisError.message);
+  // Si une connexion est en cours, attendre qu'elle se termine
+  if (!cachedRedis.promise) {
+    try {
+      logger.info('Initialisation du client Redis...');
+      const client = redis.createClient({
+        url: process.env.REDIS_URL,
+      });
+
+      cachedRedis.promise = client.connect().then(() => {
+        logger.info('Connecté avec succès à Redis');
+        cachedRedis.client = client;
+        return client;
+      });
+    } catch (redisError) {
+      cachedRedis.promise = null;
+      logger.warn('Erreur lors de la connexion à Redis, continuation sans Redis:', redisError.message);
+      return null;
+    }
+  }
+
+  try {
+    await cachedRedis.promise;
+  } catch (e) {
+    cachedRedis.promise = null;
     return null;
   }
+
+  return cachedRedis.client;
 }
 
 // Middleware pour s'assurer que MongoDB est connecté avant chaque requête
@@ -133,6 +180,10 @@ app.use(async (req, res, next) => {
     const redis = await connectToRedis();
     if (redis) {
       req.redisClient = redis;
+      // Aussi mettre dans app pour compatibilité avec l'ancien code
+      if (!app.get('redisClient')) {
+        app.set('redisClient', redis);
+      }
     }
 
     next();
@@ -202,8 +253,8 @@ if (require.main === module) {
       const gracefulShutdown = async () => {
         logger.info('Fermeture gracieuse en cours...');
         try {
-          if (redisClient && redisClient.isOpen) {
-            await redisClient.quit();
+          if (cachedRedis.client && cachedRedis.client.isOpen) {
+            await cachedRedis.client.quit();
           }
           if (mongoose.connection.readyState === 1) {
             await mongoose.connection.close();

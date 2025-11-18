@@ -18,7 +18,7 @@ router.get('/random', async (req, res) => {
   console.log('Request headers:', req.headers);
   
   const { type, player, toys, intensity } = req.query;
-  const redisClient = req.app.get('redisClient'); // Peut être null si Redis n'est pas configuré
+  const redisClient = req.redisClient || req.app.get('redisClient'); // Peut être null si Redis n'est pas configuré
 
   console.log('Request params:', { type, player, toys, intensity });
 

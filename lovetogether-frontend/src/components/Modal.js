@@ -202,7 +202,7 @@ const ToyChip = styled(Chip)`
 const ColumnContainer = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 0px;
 `;
 
 const SmallColumnContainer = styled.div`
@@ -227,7 +227,9 @@ const InputField = styled.input`
 
 const MobileAccordion = styled.div`
   @media (min-width: 769px) {
-    display: none;
+    display: none !important;
+    height: 0;
+    overflow: hidden;
   }
 `;
 
@@ -359,7 +361,9 @@ const Label = styled.label`
 
 const DesktopChipsContainer = styled(ChipsContainer)`
   @media (max-width: 768px) {
-    display: none;
+    display: none !important;
+    height: 0;
+    overflow: hidden;
   }
 `;
 
@@ -372,8 +376,13 @@ const ChevronIcon = styled(ChevronDownIcon)`
 
 const MobileDeselectAllButton = styled.button`
   display: none;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
   @media (max-width: 768px) {
     display: flex;
+    height: auto;
     align-items: center;
     gap: 8px;
     padding: 0;
@@ -399,8 +408,30 @@ const Modal = ({ isOpen, onClose, onSave }) => {
   const { firstName1, firstName2, selectedToys, updateUserPreferences } = useContext(UserContext);
   const playButtonSound = useButtonSound();
 
-  const [toysByCategory, setToysByCategory] = useState({});
-  const [loadingToys, setLoadingToys] = useState(true);
+  // Initialiser depuis le cache si disponible
+  const initializeToysFromCache = () => {
+    try {
+      const cachedData = localStorage.getItem('toys_cache');
+      const cachedTimestamp = localStorage.getItem('toys_cache_timestamp');
+      const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+      
+      if (cachedData && cachedTimestamp) {
+        const now = Date.now();
+        const cacheAge = now - parseInt(cachedTimestamp, 10);
+        
+        if (cacheAge < CACHE_DURATION) {
+          return JSON.parse(cachedData);
+        }
+      }
+    } catch (error) {
+      logger.error('Error initializing toys from cache:', error);
+    }
+    return {};
+  };
+
+  const cachedToys = initializeToysFromCache();
+  const [toysByCategory, setToysByCategory] = useState(cachedToys);
+  const [loadingToys, setLoadingToys] = useState(Object.keys(cachedToys).length === 0);
   const [toysError, setToysError] = useState(null);
   const [tempFormState, setTempFormState] = useState(() => ({
     firstName1: localStorage.getItem('firstName1') || firstName1 || '',
@@ -421,7 +452,55 @@ const Modal = ({ isOpen, onClose, onSave }) => {
   }, [firstName1, firstName2, selectedToys]);
 
   useEffect(() => {
-    const fetchToys = async () => {
+    const CACHE_KEY = 'toys_cache';
+    const CACHE_TIMESTAMP_KEY = 'toys_cache_timestamp';
+    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes en millisecondes
+
+    const loadToysFromCache = () => {
+      try {
+        const cachedData = localStorage.getItem(CACHE_KEY);
+        const cachedTimestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+        
+        if (cachedData && cachedTimestamp) {
+          const now = Date.now();
+          const cacheAge = now - parseInt(cachedTimestamp, 10);
+          
+          if (cacheAge < CACHE_DURATION) {
+            // Cache valide, charger immédiatement
+            const groupedToys = JSON.parse(cachedData);
+            setToysByCategory(groupedToys);
+            setLoadingToys(false);
+            
+            setTempFormState(prev => {
+              const updatedState = {
+                ...prev,
+                selectedCategories: Object.keys(groupedToys),
+                toysByCategoryState: Object.keys(groupedToys).reduce((acc, category) => {
+                  acc[category] = prev.toysByCategoryState[category] || [];
+                  return acc;
+                }, {}),
+              };
+              return updatedState;
+            });
+            
+            return true; // Cache utilisé
+          }
+        }
+      } catch (error) {
+        logger.error('Error loading toys from cache:', error);
+      }
+      return false; // Cache invalide ou inexistant
+    };
+
+    const fetchToys = async (useCache = true) => {
+      // Essayer d'abord le cache si demandé
+      if (useCache && loadToysFromCache()) {
+        // Cache utilisé, on peut faire un refresh en arrière-plan si nécessaire
+        // mais on ne bloque pas l'interface
+        return;
+      }
+
+      // Pas de cache valide, charger depuis l'API
       setLoadingToys(true);
       setToysError(null);
       
@@ -455,6 +534,14 @@ const Modal = ({ isOpen, onClose, onSave }) => {
         logger.log('Grouped toys by category:', groupedToys);
         setToysByCategory(groupedToys);
 
+        // Mettre en cache
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify(groupedToys));
+          localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+        } catch (cacheError) {
+          logger.warn('Could not save toys to cache:', cacheError);
+        }
+
         setTempFormState(prev => {
           const updatedState = {
             ...prev,
@@ -479,7 +566,7 @@ const Modal = ({ isOpen, onClose, onSave }) => {
 
     // Ne fetch que si le modal est ouvert
     if (isOpen) {
-      fetchToys();
+      fetchToys(true); // Essayer le cache d'abord
     }
   }, [isOpen]);
 
@@ -628,19 +715,18 @@ const Modal = ({ isOpen, onClose, onSave }) => {
         </TitleContainer>
         <ColumnContainer>
           <SmallColumnContainer>
-           
             <MobileDeselectAllButton onClick={deselectAllToys}>
               Tout désélectionner
             </MobileDeselectAllButton>
             
             {loadingToys && (
-              <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+              <div style={{ padding: '20px', textAlign: 'center', color: '#666', minHeight: '40px' }}>
                 Chargement des jouets...
               </div>
             )}
             
             {toysError && (
-              <div style={{ padding: '20px', textAlign: 'center', color: '#ff4500' }}>
+              <div style={{ padding: '20px', textAlign: 'center', color: '#ff4500', minHeight: '40px' }}>
                 {toysError}
                 <br />
                 <small style={{ color: '#666', marginTop: '10px', display: 'block' }}>
@@ -650,7 +736,7 @@ const Modal = ({ isOpen, onClose, onSave }) => {
             )}
             
             {!loadingToys && !toysError && Object.keys(toysByCategory).length === 0 && (
-              <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+              <div style={{ padding: '20px', textAlign: 'center', color: '#666', minHeight: '40px' }}>
                 Aucun jouet disponible
               </div>
             )}
