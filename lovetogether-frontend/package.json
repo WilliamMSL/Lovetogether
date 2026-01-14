@@ -8,6 +8,8 @@
     "@testing-library/user-event": "^13.5.0",
     "@vercel/speed-insights": "^1.2.0",
     "axios": "^1.7.4",
+    "embla-carousel-autoplay": "^8.6.0",
+    "embla-carousel-react": "^8.6.0",
     "gsap": "^3.12.5",
     "lottie-react": "^2.4.0",
     "react": "^18.3.1",

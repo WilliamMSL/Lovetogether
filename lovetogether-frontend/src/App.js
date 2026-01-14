@@ -10,6 +10,7 @@ import { CardProvider } from './components/CardContext';
 import { SettingsModalProvider } from './contexts/SettingsModalContext';
 import { UsersModalProvider } from './contexts/UsersModalContext';
 import { GrainProvider } from './contexts/GrainContext';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import SettingsModal from './components/SettingsModal';
 import UsersModal from './components/UsersModal';
 import styled from 'styled-components';
@@ -18,8 +19,11 @@ import { SpeedInsights } from "@vercel/speed-insights/react"
 const AppWrapper = styled.div`
   width: 100%;
   height: 100%;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background-color: ${props => props.$bgColor};
+  transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 `;
 
 const ContentWrapper = styled.div`
@@ -29,11 +33,16 @@ const ContentWrapper = styled.div`
   -webkit-overflow-scrolling: touch;
 `;
 
-const App = () => {
-  const [backgroundColor, setBackgroundColor] = useState('#FFFFFF');
+// Composant interne qui utilise le thème
+const ThemedApp = () => {
+  const { theme } = useTheme();
+  const [backgroundColor, setBackgroundColor] = useState(null);
+
+  // Utiliser la couleur du thème si pas de couleur personnalisée
+  const bgColor = backgroundColor || theme.background;
 
   return (
-    <AppWrapper style={{ backgroundColor }}>
+    <AppWrapper $bgColor={bgColor}>
       <GrainProvider>
         <SettingsModalProvider>
           <UsersModalProvider>
@@ -41,7 +50,7 @@ const App = () => {
               <ContentWrapper>
                 <Router>
                   <Routes>
-                    <Route path="/" element={<MainContent backgroundColor={backgroundColor} setBackgroundColor={setBackgroundColor} />} />
+                    <Route path="/" element={<MainContent backgroundColor={bgColor} setBackgroundColor={setBackgroundColor} />} />
                     <Route path="/generator" element={<Layout><Generator /></Layout>} />
                     <Route path="/action-verite" element={<Layout><ActionVerite /></Layout>} />
                     <Route path="/roleplay" element={<Layout><Roleplay /></Layout>} />
@@ -57,6 +66,14 @@ const App = () => {
       </GrainProvider>
       <SpeedInsights/>
     </AppWrapper>
+  );
+};
+
+const App = () => {
+  return (
+    <ThemeProvider>
+      <ThemedApp />
+    </ThemeProvider>
   );
 };
 

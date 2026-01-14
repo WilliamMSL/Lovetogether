@@ -38,11 +38,11 @@ const CardFace = styled.div`
 `;
 
 const CardFront = styled(CardFace)`
-  background-image: url(${props => props.image});
+  background-image: url(${props => props.$image});
 `;
 
 const CardBack = styled(CardFace)`
-  background-color: #F3F3F3;
+  background-color: var(--cardBackground);
   transform: rotateY(180deg);
   display: flex;
   flex-direction: column;
@@ -56,10 +56,11 @@ const Title = styled.h1`
   font-weight: 600;
   margin-bottom: 20px;
   text-transform: uppercase;
+  color: var(--text);
 `;
 
 const CardText = styled.div`
-  color: #333;
+  color: var(--text);
   font-family: Paragon;
   font-size: 1.75rem;
   text-align: center;
@@ -70,7 +71,7 @@ const Footer = styled.div`
   text-transform: uppercase;
   font-size: 14px;
   font-weight: 400;
-  color: #000000;
+  color: var(--textSecondary);
   margin-top: 20px;
 `;
 
@@ -85,7 +86,7 @@ const TruthDareCard = ({
   return (
     <CardWrapper ref={cardRef} onClick={onClick}>
       <CardInner className="inner">
-        <CardFront image={image} />
+        <CardFront $image={image} />
         <CardBack>
           <Title>Truth & Dare</Title>
           <CardText>

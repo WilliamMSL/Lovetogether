@@ -13,9 +13,10 @@ const Container = styled.div`
   height: 100%;
   width: 100vw;
   overflow: hidden;
-  background-color: #FFFFFF;
+  background-color: var(--background);
   position: relative; 
   z-index: 5;
+  transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 `;
 
 const Button = styled.button`
@@ -24,10 +25,10 @@ const Button = styled.button`
   gap: 8px;
   padding: 0 22px;
   height: 44px;
-  background-color: #F3F3F3;
+  background-color: var(--buttonBackground);
   border: none;
   border-radius: 1000px;
-  color: #000;
+  color: var(--text);
   font-family: 'Poppins', sans-serif;
   font-size: 14px;
   font-weight: 600;
@@ -36,7 +37,7 @@ const Button = styled.button`
   transition: all 0.2s ease;
 
   &:hover {
-    background-color: #E8E8E8;
+    background-color: var(--buttonBackgroundHover);
     transform: scale(1.02);
   }
 
@@ -47,6 +48,11 @@ const Button = styled.button`
   svg {
     width: 16px;
     height: 16px;
+    stroke: var(--text);
+    
+    path, line, circle, polyline {
+      stroke: var(--text);
+    }
   }
 `;
 

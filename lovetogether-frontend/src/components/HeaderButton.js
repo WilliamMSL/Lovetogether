@@ -4,7 +4,7 @@ import styled from 'styled-components';
 const ButtonContainer = styled.button`
   width: 40px;
   height: 40px;
-  background-color: #F3F3F3;
+  background-color: var(--buttonBackground);
   border: none;
   border-radius: 14px;
   display: flex;
@@ -15,7 +15,7 @@ const ButtonContainer = styled.button`
   padding: 0;
 
   &:hover {
-    background-color: #E8E8E8;
+    background-color: var(--buttonBackgroundHover);
     transform: scale(1.05);
   }
 
@@ -30,11 +30,17 @@ const IconWrapper = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #111111;
+  color: var(--text);
 
   svg {
     width: 20px;
     height: 20px;
+    stroke: var(--text) !important;
+    fill: none;
+    
+    path, line, circle, rect, polyline, polygon {
+      stroke: var(--text) !important;
+    }
   }
 `;
 

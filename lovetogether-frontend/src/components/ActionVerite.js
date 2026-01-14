@@ -1,6 +1,5 @@
 import React, { useRef, useState, useEffect, useContext } from 'react';
 import styled from 'styled-components';
-import axios from 'axios';
 import { UserContext } from './UserContext';
 import AVModal from './AVModal';
 import AVModalForeplay from './AVModalForeplay';
@@ -14,49 +13,45 @@ import { initializeCardPositions, animateCardSelection, resetCardPositions, flip
 import truthImage from '../images/junebaby.png';
 import dareImage from '../images/love.png';
 import logger from '../utils/logger';
-import { API_BASE_URL, API_ENDPOINTS } from '../constants/api';
 import { INTENSITY_LEVELS } from '../constants/intensityLevels';
 import { useSettingsModal } from '../contexts/SettingsModalContext';
 import { useUsersModal } from '../contexts/UsersModalContext';
+import { fetchRandomTruthOrDare } from '../lib/supabaseService';
 
-const buildPlayerParams = (player, playersList) => {
-  // Trouver l'index du joueur actuel
-  const currentIndex = playersList.findIndex(p => p === player);
+// Mapper le genre vers le paramètre API
+// female → firstName1 (cartes pour femmes)
+// male → firstName2 (cartes pour hommes)  
+// mixed → all (cartes mixtes)
+const genderToApiPlayer = (gender) => {
+  switch (gender) {
+    case 'female': return 'firstName1';
+    case 'male': return 'firstName2';
+    default: return 'all';
+  }
+};
+
+const buildPlayerParams = (playerName, playerGender, playersWithGender) => {
+  // Mapper le genre vers le paramètre API
+  const mappedPlayer = genderToApiPlayer(playerGender);
   
-  // Pour l'API, on utilise firstName1 ou firstName2 selon la position
-  // Si plus de 2 joueurs, on alterne entre firstName1 et firstName2
-  const mappedPlayer = currentIndex % 2 === 0 ? 'firstName1' : 'firstName2';
+  // Trouver un autre joueur au hasard
+  const otherPlayers = playersWithGender.filter(p => {
+    const name = typeof p === 'string' ? p : p.name;
+    return name !== playerName;
+  });
   
-  // Choisir un autre joueur au hasard parmi les joueurs restants
-  const otherPlayers = playersList.filter((_, index) => index !== currentIndex);
   let otherPlayer = '';
-  
   if (otherPlayers.length > 0) {
-    // Choisir un joueur aléatoire parmi les autres
     const randomIndex = Math.floor(Math.random() * otherPlayers.length);
-    otherPlayer = otherPlayers[randomIndex] || '';
-  } else if (playersList.length > 0) {
-    // Fallback si un seul joueur
-    otherPlayer = playersList[0] || '';
+    const other = otherPlayers[randomIndex];
+    otherPlayer = typeof other === 'string' ? other : other.name || '';
+  } else if (playersWithGender.length > 0) {
+    const first = playersWithGender[0];
+    otherPlayer = typeof first === 'string' ? first : first.name || '';
   }
 
   return { mappedPlayer, otherPlayer };
 };
-
-const buildToysParam = (selectedToys) => {
-  if (!Array.isArray(selectedToys) || selectedToys.length === 0) {
-    return ['all'];
-  }
-
-  return [...selectedToys, 'all'];
-};
-
-const buildRequestParams = ({ type, mappedPlayer, intensity, toysParam }) => ({
-  type,
-  player: mappedPlayer,
-  toys: toysParam.join(','),
-  intensity,
-});
 
 const formatTemplate = (template, player, otherPlayer) => {
   if (!template) {
@@ -70,8 +65,6 @@ const formatTemplate = (template, player, otherPlayer) => {
     .replace(/{AutrePlayer}/gi, otherPlayer);
 };
 
-// API Base URL log removed for security
-
 const Container = styled.div`
   display: flex;
   flex-direction: column;
@@ -80,9 +73,10 @@ const Container = styled.div`
   height:100%;
   width: 100vw;
   overflow: hidden;
-  background-color: #FFFFFF;
+  background-color: var(--background);
   position: relative;
   z-index: 1;
+  transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 `;
 
 const CardsContainer = styled.div`
@@ -144,14 +138,14 @@ const DarkRedLightEffect = styled.div`
 const CombinedButton = styled.div`
   display: flex;
   align-items: stretch;
-  background-color: #F3F3F3;
+  background-color: var(--buttonBackground);
   border-radius: 1000px;
   height: 44px;
   overflow: hidden;
   transition: all 0.2s ease;
 
   &:hover {
-    background-color: #E8E8E8;
+    background-color: var(--buttonBackgroundHover);
     transform: scale(1.02);
   }
 
@@ -169,7 +163,7 @@ const Button = styled.button`
   height: 100%;
   background-color: transparent;
   border: none;
-  color: #000;
+  color: var(--text);
   font-family: 'Poppins', sans-serif;
   font-size: 14px;
   font-weight: 600;
@@ -198,7 +192,7 @@ const Button = styled.button`
 const Divider = styled.div`
   width: 0;
   height: 100%;
-  border-left: 1px dashed #C2C2C2;
+  border-left: 1px dashed var(--inputBorder);
   align-self: stretch;
   margin: 0;
   padding: 0;
@@ -220,7 +214,7 @@ const TimerRectangle = styled.div`
 `;
 
 const ActionVerite = () => {
-  const { firstName1, firstName2, players, selectedToys } = useContext(UserContext);
+  const { firstName1, firstName2, players, playersWithGender, selectedToys } = useContext(UserContext);
   const [clickedCard, setClickedCard] = useState(null);
   const [randomText, setRandomText] = useState('');
   const [duration, setDuration] = useState(null);
@@ -231,8 +225,14 @@ const ActionVerite = () => {
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [currentToys, setCurrentToys] = useState([]);
   
-  // Calculer le joueur actuel à partir de l'index
+  // Calculer le joueur actuel à partir de l'index (nom pour affichage)
   const currentPlayer = players && players.length > 0 ? players[currentPlayerIndex] : (firstName1 || '');
+  
+  // Obtenir le genre du joueur actuel
+  const currentPlayerData = playersWithGender && playersWithGender.length > 0 
+    ? playersWithGender[currentPlayerIndex] 
+    : null;
+  const currentPlayerGender = currentPlayerData?.gender || 'mixed';
 
   // Hooks personnalisés
   const timer = useTimer(duration, timerRectangleRef);
@@ -256,48 +256,47 @@ const ActionVerite = () => {
     initializeCardPositions(leftCardRef, rightCardRef);
   }, [intensityProgression.intensity]);
 
-  const fetchRandomActionOrTruth = async (type, player) => {
+  const fetchRandomActionOrTruth = async (type, playerName, playerGender) => {
     try {
       logger.log("Selected toys before request:", selectedToys);
-      const { mappedPlayer, otherPlayer } = buildPlayerParams(player, players && players.length > 0 ? players : [firstName1, firstName2].filter(p => p));
-      const toysParam = buildToysParam(selectedToys);
-      const params = buildRequestParams({ 
-        type, 
-        mappedPlayer, 
-        intensity: intensityProgression.intensity, 
-        toysParam 
+      logger.log("Player gender:", playerGender);
+      
+      const playersData = playersWithGender && playersWithGender.length > 0 
+        ? playersWithGender 
+        : [{ name: firstName1, gender: 'mixed' }, { name: firstName2, gender: 'mixed' }].filter(p => p.name);
+      
+      const { mappedPlayer, otherPlayer } = buildPlayerParams(playerName, playerGender, playersData);
+      
+      // Préparer les toys pour Supabase (array)
+      // On envoie directement les toys sélectionnés, le service gère le filtrage
+      const toysArray = Array.isArray(selectedToys) ? selectedToys : [];
+
+      logger.log("🎯 Request params:", {
+        player: mappedPlayer,
+        selectedToys: toysArray,
+        intensity: intensityProgression.intensity
       });
 
-      logger.log("Toys parameter for request:", toysParam);
-      // API request logs removed for security
-
-      const response = await axios.get(`${API_BASE_URL}${API_ENDPOINTS.TRUTH_OR_DARE}`, {
-        params,
+      // Appel Supabase
+      const response = await fetchRandomTruthOrDare({
+        type,
+        player: mappedPlayer,
+        toys: toysArray,
+        intensity: intensityProgression.intensity
       });
 
-      // API response log removed for security
-
-      if (response.data && response.data.template) {
-        const { template, duration, toys } = response.data;
+      if (response && response.template) {
+        const { template, duration, toys } = response;
         setDuration(duration || null);
         setCurrentToys(toys || []);
 
-        return formatTemplate(template, player, otherPlayer);
+        return formatTemplate(template, playerName, otherPlayer);
       } else {
-        logger.error('Unexpected API response format:', response.data);
-        throw new Error('Réponse API inattendue');
+        logger.error('Unexpected response format:', response);
+        throw new Error('Réponse inattendue');
       }
     } catch (error) {
       logger.error('Error fetching action or truth:', error);
-      if (error.response) {
-        logger.error('Error data:', error.response.data);
-        logger.error('Error status:', error.response.status);
-        logger.error('Error headers:', error.response.headers);
-      } else if (error.request) {
-        logger.error('No response received:', error.request);
-      } else {
-        logger.error('Error message:', error.message);
-      }
       throw error;
     }
   };
@@ -331,9 +330,9 @@ const ActionVerite = () => {
       let randomText = '';
 
       if (card === 'left') {
-        randomText = await fetchRandomActionOrTruth('truth', currentPlayer);
+        randomText = await fetchRandomActionOrTruth('truth', currentPlayer, currentPlayerGender);
       } else {
-        randomText = await fetchRandomActionOrTruth('dare', currentPlayer);
+        randomText = await fetchRandomActionOrTruth('dare', currentPlayer, currentPlayerGender);
         // Incrémenter le compteur de dare (seulement en low/medium, pas en high)
         if (intensityProgression.intensity !== INTENSITY_LEVELS.HIGH) {
           intensityProgression.incrementDareCount();

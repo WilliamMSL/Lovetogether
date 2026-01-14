@@ -4,7 +4,8 @@ import styled from 'styled-components';
 const CardContainer = styled.div`
   width: 100%;
   height: 100%;
-  background-image: url(${props => props.image});
+  aspect-ratio: 1 / 1;
+  background-image: url(${props => props.$image});
   background-size: cover;
   background-position: center;
   border-radius: 16px;
@@ -13,11 +14,12 @@ const CardContainer = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  transform: translate(${props => props.translateX}px, ${props => props.translateY}px) rotate(${props => props.rotate || '0deg'});
+  transform: translate(${props => props.$translateX}px, ${props => props.$translateY}px) rotate(${props => props.$rotate || '0deg'});
   transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
   cursor: pointer;
   z-index: 1;
   position: relative;
+  flex-shrink: 0;
 
   &:hover {
     cursor: pointer; 
@@ -35,7 +37,7 @@ const LabelOverlay = styled.div`
   justify-content: center;
   background-color: rgba(0, 0, 0, 0.5);
   border-radius: 16px;
-  opacity: ${props => props.show ? 1 : 0};
+  opacity: ${props => props.$show ? 1 : 0};
   transition: opacity 0.3s ease;
   pointer-events: none;
   z-index: 2;
@@ -60,10 +62,20 @@ const CardWrapper = styled.div`
   align-items: center;
   width: 300px;
   height: 300px;
+  min-width: 300px;
+  min-height: 300px;
+  max-width: 300px;
+  max-height: 300px;
+  flex-shrink: 0;
+  aspect-ratio: 1 / 1;
   
   @media (max-width: 800px) {
     width: 280px;
     height: 280px;
+    min-width: 280px;
+    min-height: 280px;
+    max-width: 280px;
+    max-height: 280px;
   }
 `;
 
@@ -200,18 +212,17 @@ const HomeCard = ({ image, rotate, onMouseEnter, onMouseLeave, onClick, label, i
   return (
     <CardWrapper>
       <CardContainer
-        image={image}
-        rotate={rotate}
-        translateX={position.x}
-        translateY={position.y}
+        $image={image}
+        $rotate={rotate}
+        $translateX={position.x}
+        $translateY={position.y}
         onMouseMove={handleMouseMove}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onClick={handleClick}
-        isMobile={isMobile}
       >
         {label && (isHovered || (isMobile && isActive)) && (
-          <LabelOverlay show={isHovered || (isMobile && isActive)}>
+          <LabelOverlay $show={isHovered || (isMobile && isActive)}>
             <LabelText>{label}</LabelText>
           </LabelOverlay>
         )}

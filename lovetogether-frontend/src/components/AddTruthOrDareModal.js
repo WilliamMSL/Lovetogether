@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import styled from 'styled-components';
 import lowIntensityImage from '../images/logo-5.svg';
 import mediumIntensityImage from '../images/whitelogo-10.svg';
 import highIntensityImage from '../images/whitelogo-20.svg';
+import { fetchToys as fetchToysFromSupabase, createTruthOrDare } from '../lib/supabaseService';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -255,16 +255,16 @@ const AddTruthOrDareModal = ({ isOpen, onClose }) => {
     setFirstName1(storedFirstName1);
     setFirstName2(storedFirstName2);
 
-    // Fetch available toys
-    const fetchToys = async () => {
+    // Fetch available toys from Supabase
+    const loadToys = async () => {
       try {
-        const response = await axios.get('http://localhost:1812/api/toys');
-        setAvailableToys(response.data);
+        const toys = await fetchToysFromSupabase();
+        setAvailableToys(toys);
       } catch (error) {
         console.error('Error fetching toys:', error);
       }
     };
-    fetchToys();
+    loadToys();
   }, []);
 
   const handleChange = (e) => {
@@ -298,7 +298,13 @@ const AddTruthOrDareModal = ({ isOpen, onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:1812/api/truthordare', formData);
+      await createTruthOrDare({
+        template: formData.template,
+        type: formData.type,
+        player: formData.player,
+        intensity: formData.intensity,
+        toys: formData.toys
+      });
       alert('Truth or Dare added successfully!');
       onClose();
     } catch (error) {
@@ -388,11 +394,11 @@ const AddTruthOrDareModal = ({ isOpen, onClose }) => {
                   {showToySelect && (
                     <CheckboxContainer>
                       {availableToys.map(toy => (
-                        <CheckboxLabel key={toy._id}>
+                        <CheckboxLabel key={toy.id || toy.name_id}>
                           <input
                             type="checkbox"
-                            value={toy._id}
-                            checked={formData.toys.includes(toy._id)}
+                            value={toy.name_id}
+                            checked={formData.toys.includes(toy.name_id)}
                             onChange={handleToyChange}
                           />
                           {toy.name}

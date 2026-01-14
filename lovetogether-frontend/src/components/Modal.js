@@ -6,12 +6,9 @@ import { ReactComponent as MinusIcon } from '../images/assets/icons/minus.svg';
 import { ReactComponent as ChevronDownIcon } from '../images/assets/icons/chevron-down.svg';
 import { ReactComponent as XIcon } from '../images/assets/icons/x-square.svg';
 import logger from '../utils/logger';
-import { API_BASE_URL } from '../constants/api';
 import backgroundCard1 from '../images/backgrounds/background-card-1.png';
 import useButtonSound from '../hooks/useButtonSound';
-
-// Définir l'URL de base de l'API
-// API Base URL log removed for security
+import { fetchToys as fetchToysFromSupabase } from '../lib/supabaseService';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -19,25 +16,27 @@ const ModalOverlay = styled.div`
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.8);
+  background: var(--modalOverlay);
   display: ${props => props.isOpen ? 'flex' : 'none'};
   align-items: center;
   justify-content: center;
   z-index: 10000000000000000000000;
+  backdrop-filter: blur(4px);
 `;
 
 const ModalContent = styled.div`
-  background: #fff;
+  background: var(--modalBackground);
   border-radius: 20px;
   padding: 24px;
   width: 90%;
   max-width: 800px;
   position: relative;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow);
   max-height: 80vh;
   overflow-y: auto;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE and Edge */
+  border: 1px solid var(--cardBorder);
   
   &::-webkit-scrollbar {
     display: none; /* Chrome, Safari, Opera */
@@ -59,7 +58,7 @@ const TitleContainer = styled.div`
 const SectionTitle = styled.h2`
   font-size: 26px;
   font-weight: 500;
-  color: #000;
+  color: var(--text);
   margin: 0;
   font-family: 'Poppins', sans-serif;
 
@@ -71,7 +70,7 @@ const SectionTitle = styled.h2`
 const CloseButton = styled.button`
   width: 40px;
   height: 40px;
-  background-color: #F3F3F3;
+  background-color: var(--buttonBackground);
   border: none;
   border-radius: 14px;
   cursor: pointer;
@@ -84,10 +83,16 @@ const CloseButton = styled.button`
   svg {
     width: 20px;
     height: 20px;
+    color: var(--text);
+    stroke: var(--text) !important;
+    
+    path, line, circle, rect, polyline, polygon {
+      stroke: var(--text) !important;
+    }
   }
   
   &:hover {
-    background-color: #E8E8E8;
+    background-color: var(--buttonBackgroundHover);
     transform: scale(1.05);
   }
 
@@ -102,10 +107,10 @@ const Button = styled.button`
   gap: 8px;
   padding: 0 22px;
   height: 44px;
-  background-color: #F3F3F3;
+  background-color: var(--buttonBackground);
   border: none;
   border-radius: 1000px;
-  color: #000;
+  color: var(--text);
   font-family: 'Poppins', sans-serif;
   font-size: 14px;
   font-weight: 600;
@@ -114,7 +119,7 @@ const Button = styled.button`
   min-width: 120px;
 
   &:hover {
-    background-color: #E8E8E8;
+    background-color: var(--buttonBackgroundHover);
     transform: scale(1.02);
   }
 
@@ -133,7 +138,7 @@ const ButtonContainer = styled.div`
 const SubTitle = styled.h3`
   font-size: 14px;
   font-weight: 500;
-  color: #666;
+  color: var(--textSecondary);
   margin-bottom: 16px;
   font-family: 'Poppins', sans-serif;
 `;
@@ -141,7 +146,7 @@ const SubTitle = styled.h3`
 const SubTitleMargin = styled.h3`
   font-size: 14px;
   font-weight: 500;
-  color: #666;
+  color: var(--textSecondary);
   margin-bottom: 16px;
   font-family: 'Poppins', sans-serif;
 `;
@@ -156,8 +161,8 @@ const ChipsContainer = styled.div`
 const Chip = styled.button`
   height: 40px;
   padding: 0 16px;
-  background-color: ${props => props.isSelected ? '#C3C3C3' : '#F3F3F3'};
-  color: #000;
+  background-color: ${props => props.isSelected ? 'var(--buttonBackgroundActive)' : 'var(--buttonBackground)'};
+  color: var(--text);
   border: none;
   border-radius: 14px;
   cursor: pointer;
@@ -172,7 +177,7 @@ const Chip = styled.button`
   gap: 8px;
 
   &:hover {
-    background-color: ${props => props.isSelected ? '#B0B0B0' : '#E8E8E8'};
+    background-color: ${props => props.isSelected ? 'var(--buttonBackgroundActive)' : 'var(--buttonBackgroundHover)'};
     transform: scale(1.02);
   }
 
@@ -190,12 +195,16 @@ const CategoryChip = styled(Chip)`
 `;
 
 const ToyChip = styled(Chip)`
-  background-color: ${props => props.isSelected ? '#C3C3C3' : '#F3F3F3'};
-  color: #000;
+  background-color: ${props => props.isSelected ? 'var(--buttonBackgroundActive)' : 'var(--buttonBackground)'};
+  color: var(--text);
   
   svg {
-    color: #000;
-    stroke: #000;
+    color: var(--text);
+    stroke: var(--text) !important;
+    
+    path, line, circle, rect, polyline, polygon {
+      stroke: var(--text) !important;
+    }
   }
 `;
 
@@ -244,7 +253,7 @@ const AccordionHeader = styled.button`
   width: 100%;
   padding: 12px 16px;
   height: 40px;
-  background-color: #F3F3F3;
+  background-color: var(--buttonBackground);
   border: none;
   border-radius: 14px;
   text-align: left;
@@ -252,12 +261,12 @@ const AccordionHeader = styled.button`
   font-family: 'Poppins', sans-serif;
   font-size: 14px;
   font-weight: 600;
-  color: #000;
+  color: var(--text);
   transition: all 0.2s ease;
   margin-bottom: 8px;
 
   &:hover {
-    background-color: #E8E8E8;
+    background-color: var(--buttonBackgroundHover);
   }
 `;
 
@@ -295,11 +304,11 @@ const CheckboxLabel = styled.label`
   justify-content: center;
   width: 20px;
   height: 20px;
-  border: 2px solid #C2C2C2;
+  border: 2px solid var(--inputBorder);
   border-radius: 4px;
   cursor: pointer;
   position: relative;
-  background-color: ${props => props.checked ? '#C3C3C3' : 'transparent'};
+  background-color: ${props => props.checked ? 'var(--accent)' : 'transparent'};
   transition: all 0.2s ease;
   flex-shrink: 0;
   
@@ -355,7 +364,7 @@ const Label = styled.label`
   font-family: 'Poppins', sans-serif;
   font-size: 14px;
   font-weight: 500;
-  color: #000;
+  color: var(--text);
   cursor: pointer;
 `;
 
@@ -372,6 +381,11 @@ const ChevronIcon = styled(ChevronDownIcon)`
   height: 20px;
   transition: transform 0.3s ease;
   transform: ${props => props.isOpen ? 'rotate(180deg)' : 'rotate(0)'};
+  stroke: var(--text) !important;
+  
+  path, line, polyline {
+    stroke: var(--text) !important;
+  }
 `;
 
 const MobileDeselectAllButton = styled.button`
@@ -388,7 +402,7 @@ const MobileDeselectAllButton = styled.button`
     padding: 0;
     background: none;
     border: none;
-    color: #666;
+    color: var(--textSecondary);
     font-family: 'Poppins', sans-serif;
     font-size: 14px;
     font-weight: 500;
@@ -399,7 +413,7 @@ const MobileDeselectAllButton = styled.button`
     margin-bottom: 16px;
 
     &:hover {
-      color: #000;
+      color: var(--text);
     }
   }
 `;
@@ -500,22 +514,16 @@ const Modal = ({ isOpen, onClose, onSave }) => {
         return;
       }
 
-      // Pas de cache valide, charger depuis l'API
+      // Pas de cache valide, charger depuis Supabase
       setLoadingToys(true);
       setToysError(null);
       
       try {
-        const response = await fetch(`${API_BASE_URL}/api/toys`);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const toys = await response.json();
-        logger.log('Fetched toys:', toys);
+        const toys = await fetchToysFromSupabase();
+        logger.log('Fetched toys from Supabase:', toys);
 
         if (!Array.isArray(toys) || toys.length === 0) {
-          logger.warn('No toys found in API response');
+          logger.warn('No toys found in Supabase');
           setToysError('Aucun jouet trouvé dans la base de données');
           setToysByCategory({});
           setLoadingToys(false);
@@ -556,7 +564,7 @@ const Modal = ({ isOpen, onClose, onSave }) => {
         });
 
       } catch (error) {
-        logger.error('Error fetching toys:', error);
+        logger.error('Error fetching toys from Supabase:', error);
         setToysError(`Erreur lors du chargement des jouets: ${error.message}`);
         setToysByCategory({});
       } finally {
@@ -633,9 +641,9 @@ const Modal = ({ isOpen, onClose, onSave }) => {
 
   const handleSave = () => {
     playButtonSound();
-    updateUserPreferences(tempFormState);
-    localStorage.setItem('firstName1', tempFormState.firstName1);
-    localStorage.setItem('firstName2', tempFormState.firstName2);
+    // Ne passer que les selectedToys pour ne pas écraser les joueurs avec leur genre
+    updateUserPreferences({ selectedToys: tempFormState.selectedToys });
+    // Sauvegarder les états locaux du modal
     localStorage.setItem('selectedToys', JSON.stringify(tempFormState.selectedToys));
     localStorage.setItem('selectedCategories', JSON.stringify(tempFormState.selectedCategories));
     localStorage.setItem('toysByCategoryState', JSON.stringify(tempFormState.toysByCategoryState));
@@ -713,6 +721,7 @@ const Modal = ({ isOpen, onClose, onSave }) => {
             <XIcon />
           </CloseButton>
         </TitleContainer>
+        
         <ColumnContainer>
           <SmallColumnContainer>
             <MobileDeselectAllButton onClick={deselectAllToys}>
@@ -730,7 +739,7 @@ const Modal = ({ isOpen, onClose, onSave }) => {
                 {toysError}
                 <br />
                 <small style={{ color: '#666', marginTop: '10px', display: 'block' }}>
-                  Vérifiez que le serveur API est démarré sur {API_BASE_URL}
+                  Vérifiez votre connexion et la configuration Supabase
                 </small>
               </div>
             )}

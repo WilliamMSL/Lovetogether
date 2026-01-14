@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import styled from 'styled-components';
 import { UserContext } from './UserContext';
 import { useUsersModal } from '../contexts/UsersModalContext';
@@ -12,25 +12,27 @@ const ModalOverlay = styled.div`
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.8);
+  background: var(--modalOverlay);
   display: ${props => props.isOpen ? 'flex' : 'none'};
   align-items: center;
   justify-content: center;
   z-index: 10000000000000000000000;
+  backdrop-filter: blur(4px);
 `;
 
 const ModalContent = styled.div`
-  background: #fff;
+  background: var(--modalBackground);
   border-radius: 20px;
   padding: 24px;
   width: 90%;
   max-width: 600px;
   position: relative;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow);
   max-height: 80vh;
   overflow-y: auto;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE and Edge */
+  border: 1px solid var(--cardBorder);
   
   &::-webkit-scrollbar {
     display: none; /* Chrome, Safari, Opera */
@@ -52,7 +54,7 @@ const TitleContainer = styled.div`
 const Title = styled.h2`
   font-size: 26px;
   font-weight: 500;
-  color: #000;
+  color: var(--text);
   margin: 0;
   font-family: 'Poppins', sans-serif;
 
@@ -64,7 +66,7 @@ const Title = styled.h2`
 const CloseButton = styled.button`
   width: 40px;
   height: 40px;
-  background-color: #F3F3F3;
+  background-color: var(--buttonBackground);
   border: none;
   border-radius: 14px;
   cursor: pointer;
@@ -77,10 +79,16 @@ const CloseButton = styled.button`
   svg {
     width: 20px;
     height: 20px;
+    color: var(--text);
+    stroke: var(--text) !important;
+    
+    path, line, circle, rect, polyline, polygon {
+      stroke: var(--text) !important;
+    }
   }
   
   &:hover {
-    background-color: #E8E8E8;
+    background-color: var(--buttonBackgroundHover);
     transform: scale(1.05);
   }
 
@@ -91,7 +99,7 @@ const CloseButton = styled.button`
 
 const SubTitle = styled.p`
   font-size: 14px;
-  color: #666;
+  color: var(--textSecondary);
   margin-bottom: 24px;
   font-family: 'Poppins', sans-serif;
 `;
@@ -120,21 +128,57 @@ const UserInput = styled.input`
   flex: 1;
   padding: 0 16px;
   height: 40px;
-  background-color: #F3F3F3;
+  background-color: var(--inputBackground);
   border: none;
   border-radius: 14px;
   font-family: 'Poppins', sans-serif;
   font-size: 14px;
   outline: none;
   transition: all 0.2s ease;
-  color: #000;
+  color: var(--text);
+  min-width: 120px;
 
   &::placeholder {
-    color: #999;
+    color: var(--textMuted);
   }
 
   &:focus {
-    background-color: #E8E8E8;
+    background-color: var(--buttonBackgroundHover);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+`;
+
+const GenderSelect = styled.select`
+  padding: 0 12px;
+  height: 40px;
+  background-color: var(--inputBackground);
+  border: none;
+  border-radius: 14px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s ease;
+  color: var(--text);
+  cursor: pointer;
+  min-width: 100px;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px;
+  padding-right: 32px;
+
+  &:focus {
+    background-color: var(--buttonBackgroundHover);
+  }
+
+  &:hover {
+    background-color: var(--buttonBackgroundHover);
+  }
+  
+  option {
+    background-color: var(--modalBackground);
+    color: var(--text);
   }
 `;
 
@@ -144,7 +188,7 @@ const RemoveButton = styled.button`
   justify-content: center;
   width: 40px;
   height: 40px;
-  background-color: #F3F3F3;
+  background-color: var(--buttonBackground);
   border: none;
   border-radius: 14px;
   cursor: pointer;
@@ -154,10 +198,16 @@ const RemoveButton = styled.button`
   svg {
     width: 20px;
     height: 20px;
+    color: var(--text);
+    stroke: var(--text) !important;
+    
+    path, line, circle, rect, polyline, polygon {
+      stroke: var(--text) !important;
+    }
   }
 
   &:hover {
-    background-color: #E8E8E8;
+    background-color: var(--buttonBackgroundHover);
     transform: scale(1.05);
   }
 
@@ -176,14 +226,14 @@ const AddButtonContainer = styled.div`
 const CombinedButton = styled.div`
   display: flex;
   align-items: stretch;
-  background-color: #F3F3F3;
+  background-color: var(--buttonBackground);
   border-radius: 1000px;
   height: 44px;
   overflow: hidden;
   transition: all 0.2s ease;
 
   &:hover {
-    background-color: #E8E8E8;
+    background-color: var(--buttonBackgroundHover);
     transform: scale(1.02);
   }
 
@@ -201,7 +251,7 @@ const AddButton = styled.button`
   height: 100%;
   background-color: transparent;
   border: none;
-  color: #000;
+  color: var(--text);
   font-family: 'Poppins', sans-serif;
   font-size: 14px;
   font-weight: 600;
@@ -225,6 +275,7 @@ const AddButton = styled.button`
   svg {
     width: 20px;
     height: 20px;
+    color: var(--text);
   }
 `;
 
@@ -236,7 +287,7 @@ const ConfirmButton = styled.button`
   height: 100%;
   background-color: transparent;
   border: none;
-  color: #000;
+  color: var(--text);
   font-family: 'Poppins', sans-serif;
   font-size: 14px;
   font-weight: 600;
@@ -255,7 +306,7 @@ const ConfirmButton = styled.button`
 const Divider = styled.div`
   width: 0;
   height: 100%;
-  border-left: 1px dashed #C2C2C2;
+  border-left: 1px dashed var(--inputBorder);
   align-self: stretch;
   margin: 0;
   padding: 0;
@@ -282,30 +333,59 @@ const MinusIcon = () => (
 
 const UsersModal = () => {
   const { isOpen, closeUsersModal } = useUsersModal();
-  const { players, firstName1, firstName2, selectedToys, updateUserPreferences } = useContext(UserContext);
+  const { playersWithGender, firstName1, firstName2, selectedToys, updateUserPreferences } = useContext(UserContext);
   const [localPlayers, setLocalPlayers] = useState([]);
   const [error, setError] = useState('');
   const playButtonSound = useButtonSound();
+  const wasOpenRef = useRef(false); // Track if modal was previously open
+
+  // Helper pour obtenir le nom d'un joueur
+  const getPlayerName = (player) => {
+    if (!player) return '';
+    if (typeof player === 'string') return player;
+    return player.name || '';
+  };
+
+  // Helper pour obtenir le genre d'un joueur
+  const getPlayerGender = (player) => {
+    if (!player) return 'mixed';
+    if (typeof player === 'string') return 'mixed';
+    return player.gender || 'mixed';
+  };
 
   useEffect(() => {
-    if (isOpen) {
-      // Initialiser avec les joueurs existants ou firstName1/firstName2
-      const initialPlayers = players && players.length > 0 
-        ? [...players] 
-        : [firstName1, firstName2].filter(p => p && p.trim() !== '');
+    // Seulement initialiser quand le modal OUVRE (pas à chaque changement de context)
+    if (isOpen && !wasOpenRef.current) {
+      // Initialiser avec les joueurs existants (objets {name, gender})
+      let initialPlayers = [];
+      
+      if (playersWithGender && playersWithGender.length > 0) {
+        initialPlayers = playersWithGender.map(p => ({
+          name: getPlayerName(p),
+          gender: getPlayerGender(p)
+        }));
+      } else if (firstName1 || firstName2) {
+        if (firstName1 && firstName1.trim()) {
+          initialPlayers.push({ name: firstName1, gender: 'mixed' });
+        }
+        if (firstName2 && firstName2.trim()) {
+          initialPlayers.push({ name: firstName2, gender: 'mixed' });
+        }
+      }
       
       // S'assurer qu'il y a au moins un joueur vide si la liste est vide
       if (initialPlayers.length === 0) {
-        setLocalPlayers(['']);
+        setLocalPlayers([{ name: '', gender: 'mixed' }]);
       } else {
         setLocalPlayers(initialPlayers);
       }
       setError('');
     }
-  }, [isOpen, players, firstName1, firstName2]);
+    wasOpenRef.current = isOpen;
+  }, [isOpen, playersWithGender, firstName1, firstName2]);
 
   const savePlayers = (playersToSave) => {
-    const validPlayers = playersToSave.filter(p => p && p.trim() !== '');
+    const validPlayers = playersToSave.filter(p => p && p.name && p.name.trim() !== '');
     
     if (validPlayers.length === 0) {
       setError('Au moins un joueur est requis');
@@ -320,8 +400,6 @@ const UsersModal = () => {
     // Sauvegarder les préférences en conservant les toys existants
     updateUserPreferences({
       players: validPlayers,
-      firstName1: validPlayers[0] || '',
-      firstName2: validPlayers[1] || '',
       selectedToys: selectedToys || [] // Conserver les toys existants
     });
 
@@ -329,11 +407,19 @@ const UsersModal = () => {
     return true;
   };
 
-  const handlePlayerChange = (index, value) => {
+  const handlePlayerNameChange = (index, value) => {
     const newPlayers = [...localPlayers];
-    newPlayers[index] = value;
+    newPlayers[index] = { ...newPlayers[index], name: value };
     setLocalPlayers(newPlayers);
     setError('');
+    // Sauvegarder automatiquement
+    savePlayers(newPlayers);
+  };
+
+  const handlePlayerGenderChange = (index, value) => {
+    const newPlayers = [...localPlayers];
+    newPlayers[index] = { ...newPlayers[index], gender: value };
+    setLocalPlayers(newPlayers);
     // Sauvegarder automatiquement
     savePlayers(newPlayers);
   };
@@ -344,7 +430,7 @@ const UsersModal = () => {
       setError('Maximum 10 joueurs autorisés');
       return;
     }
-    const newPlayers = [...localPlayers, ''];
+    const newPlayers = [...localPlayers, { name: '', gender: 'mixed' }];
     setLocalPlayers(newPlayers);
     setError('');
     // Ne pas sauvegarder automatiquement ici car le joueur est vide
@@ -388,9 +474,17 @@ const UsersModal = () => {
               <UserInput
                 type="text"
                 placeholder="Prénom"
-                value={player}
-                onChange={(e) => handlePlayerChange(index, e.target.value)}
+                value={player.name || ''}
+                onChange={(e) => handlePlayerNameChange(index, e.target.value)}
               />
+              <GenderSelect
+                value={player.gender || 'mixed'}
+                onChange={(e) => handlePlayerGenderChange(index, e.target.value)}
+              >
+                <option value="mixed">🔀 Mixte</option>
+                <option value="female">👩 Femme</option>
+                <option value="male">👨 Homme</option>
+              </GenderSelect>
               {localPlayers.length > 1 && (
                 <RemoveButton onClick={() => handleRemovePlayer(index)}>
                   <TrashIcon />

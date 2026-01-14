@@ -5,6 +5,7 @@ import CardsWrapper from './CardsWrapper';
 import { useCard } from './CardContext';
 import GrainEffect from './GrainEffect';
 import HeaderButton from './HeaderButton';
+import ThemeToggleButton from './ThemeToggleButton';
 import { ReactComponent as UserIcon } from '../images/assets/icons/user.svg';
 import { ReactComponent as SlidersIcon } from '../images/assets/icons/sliders.svg';
 import { ReactComponent as XIcon } from '../images/assets/icons/x-square.svg';
@@ -21,7 +22,8 @@ const BackgroundContainer = styled.div`
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background-color: #FFFFFF;
+  background-color: var(--background);
+  transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   
   &::after {
     content: '';
@@ -88,8 +90,8 @@ const Tooltip = styled.div`
   bottom: -45px;
   right: 0;
   transform: translateX(0);
-  background-color: #000000;
-  color: #FFFFFF;
+  background-color: var(--tooltipBackground);
+  color: var(--tooltipText);
   padding: 8px 12px;
   border-radius: 14px;
   font-family: 'Poppins', sans-serif;
@@ -111,7 +113,7 @@ const Tooltip = styled.div`
     height: 0;
     border-left: 4px solid transparent;
     border-right: 4px solid transparent;
-    border-bottom: 4px solid #000000;
+    border-bottom: 4px solid var(--tooltipBackground);
   }
 `;
 
@@ -159,16 +161,49 @@ const BottomButtonContainer = styled.div`
   z-index: 1001;
 `;
 
+// Effet de lumière colorée au bas de l'écran
+const LightEffect = styled.div`
+  position: absolute;
+  bottom: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 700px;
+  height: 280px;
+  background: ${props => {
+    switch (props.$activeCard) {
+      case 'Truth or Dare':
+        // Bleu et vert
+        return 'radial-gradient(ellipse at 30% 50%, rgba(59, 130, 246, 0.6) 0%, transparent 50%), radial-gradient(ellipse at 70% 50%, rgba(34, 197, 94, 0.6) 0%, transparent 50%)';
+      case 'Positions':
+        // Rouge et rose
+        return 'radial-gradient(ellipse at 30% 50%, rgba(239, 68, 68, 0.6) 0%, transparent 50%), radial-gradient(ellipse at 70% 50%, rgba(236, 72, 153, 0.6) 0%, transparent 50%)';
+      case 'Roleplay':
+        // Vert et rose
+        return 'radial-gradient(ellipse at 30% 50%, rgba(34, 197, 94, 0.6) 0%, transparent 50%), radial-gradient(ellipse at 70% 50%, rgba(236, 72, 153, 0.6) 0%, transparent 50%)';
+      case 'Roulette':
+        // Vert et rouge
+        return 'radial-gradient(ellipse at 30% 50%, rgba(34, 197, 94, 0.6) 0%, transparent 50%), radial-gradient(ellipse at 70% 50%, rgba(239, 68, 68, 0.6) 0%, transparent 50%)';
+      default:
+        return 'radial-gradient(ellipse, rgba(238, 108, 143, 0.4) 0%, rgba(238, 108, 143, 0.2) 40%, transparent 70%)';
+    }
+  }};
+  filter: blur(60px);
+  z-index: 1;
+  pointer-events: none;
+  opacity: ${props => props.$show ? 1 : 0};
+  transition: opacity 0.5s ease, background 0.5s ease;
+`;
+
 const GenerateButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0 22px;
   height: 44px;
-  background-color: #F3F3F3;
+  background-color: var(--buttonBackground);
   border: none;
   border-radius: 1000px;
-  color: #000;
+  color: var(--text);
   font-family: 'Poppins', sans-serif;
   font-size: 14px;
   font-weight: 600;
@@ -178,7 +213,7 @@ const GenerateButton = styled.button`
   min-width: 120px;
 
   &:hover {
-    background-color: #E8E8E8;
+    background-color: var(--buttonBackgroundHover);
     transform: scale(1.02);
   }
 
@@ -232,6 +267,7 @@ const MainContent = () => {
             <img src={LoveTogetherLogo} alt="LoveTogether" />
           </LogoContainer>
           <HeaderButtonsContainer>
+            <ThemeToggleButton />
             <HeaderButton 
               icon={<UserIcon />} 
               onClick={openUsersModal} 
@@ -262,26 +298,29 @@ const MainContent = () => {
       )}
 
       {isHomePage && (
-        <CardsContainer
-          ref={cardsRef}
-          opacity={cardsOpacity}
-          isAnimated={isAnimated}
-          clickable={cardsClickable}
-        >
-          <CardsWrapper 
-            setLogoSrc={setLogoSrc}
-            setShowBackgroundImage={setShowBackgroundImage}
-            currentCardIndex={currentCardIndex}
-            onCardHover={setHoveredCardLabel}
-          />
-          {showNavbar && (
-            <BottomButtonContainer>
-              <GenerateButton onClick={() => {}}>
-                {hoveredCardLabel || 'Sélectionnez une carte'}
-              </GenerateButton>
-            </BottomButtonContainer>
-          )}
-        </CardsContainer>
+        <>
+          <LightEffect $show={!!hoveredCardLabel} $activeCard={hoveredCardLabel} />
+          <CardsContainer
+            ref={cardsRef}
+            opacity={cardsOpacity}
+            isAnimated={isAnimated}
+            clickable={cardsClickable}
+          >
+            <CardsWrapper 
+              setLogoSrc={setLogoSrc}
+              setShowBackgroundImage={setShowBackgroundImage}
+              currentCardIndex={currentCardIndex}
+              onCardHover={setHoveredCardLabel}
+            />
+            {showNavbar && (
+              <BottomButtonContainer>
+                <GenerateButton onClick={() => {}}>
+                  {hoveredCardLabel || 'Sélectionnez une carte'}
+                </GenerateButton>
+              </BottomButtonContainer>
+            )}
+          </CardsContainer>
+        </>
       )}
 
     </BackgroundContainer>

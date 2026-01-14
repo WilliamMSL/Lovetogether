@@ -2,6 +2,7 @@ import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import HeaderButton from './HeaderButton';
+import ThemeToggleButton from './ThemeToggleButton';
 import { ReactComponent as UserIcon } from '../images/assets/icons/user.svg';
 import { ReactComponent as SlidersIcon } from '../images/assets/icons/sliders.svg';
 import { useSettingsModal } from '../contexts/SettingsModalContext';
@@ -56,8 +57,8 @@ const Tooltip = styled.div`
   bottom: -45px;
   right: 0;
   transform: translateX(0);
-  background-color: #000000;
-  color: #FFFFFF;
+  background-color: var(--tooltipBackground);
+  color: var(--tooltipText);
   padding: 8px 12px;
   border-radius: 14px;
   font-family: 'Poppins', sans-serif;
@@ -79,7 +80,7 @@ const Tooltip = styled.div`
     height: 0;
     border-left: 4px solid transparent;
     border-right: 4px solid transparent;
-    border-bottom: 4px solid #000000;
+    border-bottom: 4px solid var(--tooltipBackground);
   }
 `;
 
@@ -101,6 +102,7 @@ const PageHeader = () => {
         <img src={LoveTogetherLogo} alt="LoveTogether" />
       </LogoContainer>
       <HeaderButtonsContainer>
+        <ThemeToggleButton />
         <HeaderButton 
           icon={<UserIcon />} 
           onClick={openUsersModal} 

@@ -1,14 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
-import axios from 'axios';
 import GrainEffect from './GrainEffect';
 import PageHeader from './PageHeader';
 import { ReactComponent as RefreshIcon } from '../images/assets/icons/refresh.svg';
 import backgroundCard1 from '../images/backgrounds/background-card-1.png';
 import useButtonSound from '../hooks/useButtonSound';
-
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:1812';
-// API Base URL log removed for security
+import { fetchRandomRoleplay as fetchRandomRoleplayFromSupabase } from '../lib/supabaseService';
 
 const PageContainer = styled.div`
   display: flex;
@@ -18,8 +15,9 @@ const PageContainer = styled.div`
   min-height: 100%;
   width: 100%;
   padding: 20px;
-  background-color: #FFFFFF;
+  background-color: var(--background);
   position: relative;
+  transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 `;
 
 const Card = styled.div`
@@ -118,19 +116,27 @@ const Button = styled.button`
   gap: 8px;
   padding: 0 22px;
   height: 44px;
-  background-color: #F3F3F3;
+  background-color: var(--buttonBackground);
   border: none;
   border-radius: 1000px;
-  color: #000;
+  color: var(--text);
   font-family: 'Poppins', sans-serif;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   z-index: 5;
   transition: all 0.2s ease;
+  
+  svg {
+    stroke: var(--text);
+    
+    path, line, circle, polyline {
+      stroke: var(--text);
+    }
+  }
 
   &:hover {
-    background-color: #E8E8E8;
+    background-color: var(--buttonBackgroundHover);
     transform: scale(1.02);
   }
 
@@ -159,8 +165,8 @@ const Roleplay = () => {
     try {
       setError(null);
       setIsLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/api/roleplay/random`);
-      setRoleplay(response.data);
+      const data = await fetchRandomRoleplayFromSupabase();
+      setRoleplay(data);
     } catch (error) {
       console.error('Erreur lors de la récupération du roleplay:', error);
       setError('Impossible de charger le roleplay. Veuillez réessayer.');
