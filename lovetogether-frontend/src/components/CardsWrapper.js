@@ -16,42 +16,16 @@ import background2 from '../images/backgrounds/background-2.png';
 import background3 from '../images/backgrounds/background-3.png';
 import background4 from '../images/backgrounds/background-4.png';
 
-// ============== DESKTOP STYLES ==============
-const DesktopContainer = styled.div`
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  gap: 20px;
+// ============== CAROUSEL STYLES (Desktop & Mobile) ==============
+const CarouselContainer = styled.div`
+  display: block;
   position: relative;
-  z-index: 1000;
   width: 100%;
-  
-  @media (max-width: 800px) {
-    display: none;
-  }
-`;
-
-const StyledHomeCardDesktop = styled(HomeCard)`
-  position: relative;
-  z-index: 1001;
-  flex-shrink: 0;
-`;
-
-// ============== MOBILE CAROUSEL STYLES ==============
-const MobileContainer = styled.div`
-  display: none;
-  
-  @media (max-width: 800px) {
-    display: block;
-    position: relative;
-    width: 100%;
-    overflow: visible;
-  }
+  overflow: visible;
 `;
 
 const EmblaViewport = styled.div`
-  overflow: visible;
+  overflow: hidden;
   width: 100%;
 `;
 
@@ -65,19 +39,23 @@ const EmblaContainer = styled.div`
 
 const EmblaSlide = styled.div`
   position: relative;
-  flex: 0 0 auto;
+  flex: 0 0 80%;
   min-width: 0;
   padding: 0 10px;
+  
+  @media (min-width: 801px) {
+    flex: 0 0 33.33%;
+  }
 `;
 
 const SlideInner = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
+  height: 100%;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  transform: scale(${props => props.$isSelected ? 1 : 0.88});
-  opacity: ${props => props.$isSelected ? 1 : 0.6};
-  flex-shrink: 0;
+  transform: scale(${props => props.$isSelected ? 1 : 0.85});
+  opacity: ${props => props.$isSelected ? 1 : 0.5};
 `;
 
 const NavButton = styled.button`
@@ -122,13 +100,21 @@ const NavButton = styled.button`
 
 const PrevButton = styled(NavButton)`
   left: 15px;
+  
+  @media (min-width: 801px) {
+    left: 50px;
+  }
 `;
 
 const NextButton = styled(NavButton)`
   right: 15px;
+  
+  @media (min-width: 801px) {
+    right: 50px;
+  }
 `;
 
-const StyledHomeCardMobile = styled(HomeCard)`
+const StyledHomeCard = styled(HomeCard)`
   flex-shrink: 0;
 `;
 
@@ -157,11 +143,16 @@ const cards = [
     logo: whiteLogo20Svg,
     path: '/roulette' 
   },
+  { 
+    image: background1, 
+    label: 'Dice Game', 
+    logo: whiteLogo20Svg,
+    path: '/dice-game' 
+  },
 ];
 
-const CardsWrapper = ({ setLogoSrc, setShowBackgroundImage, onCardHover }) => {
+const CardsWrapper = ({ onCardHover }) => {
   const navigate = useNavigate();
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 800);
   const [selectedIndex, setSelectedIndex] = useState(0);
   
   const [emblaRef, emblaApi] = useEmblaCarousel({
@@ -170,16 +161,6 @@ const CardsWrapper = ({ setLogoSrc, setShowBackgroundImage, onCardHover }) => {
     skipSnaps: false,
     dragFree: false,
   });
-
-  // Detect mobile
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 800);
-    };
-    
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   const scrollPrev = useCallback(() => {
     if (emblaApi) emblaApi.scrollPrev();
@@ -194,11 +175,11 @@ const CardsWrapper = ({ setLogoSrc, setShowBackgroundImage, onCardHover }) => {
     const index = emblaApi.selectedScrollSnap();
     setSelectedIndex(index);
     
-    // Mettre à jour le label sur mobile
-    if (isMobile && onCardHover) {
+    // Mettre à jour le label
+    if (onCardHover) {
       onCardHover(cards[index].label);
     }
-  }, [emblaApi, isMobile, onCardHover]);
+  }, [emblaApi, onCardHover]);
 
   useEffect(() => {
     if (!emblaApi) return;
@@ -213,81 +194,41 @@ const CardsWrapper = ({ setLogoSrc, setShowBackgroundImage, onCardHover }) => {
     };
   }, [emblaApi, onSelect]);
 
-  // Initialiser le label au chargement sur mobile
+  // Initialiser le label au chargement
   useEffect(() => {
-    if (isMobile && onCardHover) {
+    if (onCardHover) {
       onCardHover(cards[0].label);
     }
-  }, [isMobile, onCardHover]);
-
-  // Desktop handlers
-  const handleMouseEnter = (card) => {
-    if (!isMobile && onCardHover) {
-      onCardHover(card.label);
-    }
-  };
-
-  const handleMouseLeave = () => {
-    if (!isMobile && onCardHover) {
-      onCardHover(null);
-    }
-  };
-
-  // Mobile handler - remettre le label de la carte sélectionnée
-  const handleMobileMouseLeave = () => {
-    if (isMobile && onCardHover) {
-      onCardHover(cards[selectedIndex].label);
-    }
-  };
+  }, [onCardHover]);
 
   return (
-    <>
-      {/* Desktop: Layout original avec toutes les cartes visibles */}
-      <DesktopContainer>
-        {cards.map((card, index) => (
-          <StyledHomeCardDesktop
-            key={index}
-            image={card.image}
-            rotate="0deg"
-            label={card.label}
-            onMouseEnter={() => handleMouseEnter(card)}
-            onMouseLeave={handleMouseLeave}
-            onClick={() => navigate(card.path)}
-            isActive={false}
-          />
-        ))}
-      </DesktopContainer>
-
-      {/* Mobile: Carousel Embla avec loop et centrage */}
-      <MobileContainer>
-        <PrevButton onClick={scrollPrev} aria-label="Précédent">
-          <ChevronLeftIcon />
-        </PrevButton>
-        
-        <EmblaViewport ref={emblaRef}>
-          <EmblaContainer>
-            {cards.map((card, index) => (
-              <EmblaSlide key={index}>
-                <SlideInner $isSelected={index === selectedIndex}>
-                  <StyledHomeCardMobile
-                    image={card.image}
-                    rotate="0deg"
-                    label={card.label}
-                    onMouseLeave={handleMobileMouseLeave}
-                    onClick={() => navigate(card.path)}
-                    isActive={index === selectedIndex}
-                  />
-                </SlideInner>
-              </EmblaSlide>
-            ))}
-          </EmblaContainer>
-        </EmblaViewport>
-        
-        <NextButton onClick={scrollNext} aria-label="Suivant">
-          <ChevronRightIcon />
-        </NextButton>
-      </MobileContainer>
-    </>
+    <CarouselContainer>
+      <PrevButton onClick={scrollPrev} aria-label="Précédent">
+        <ChevronLeftIcon />
+      </PrevButton>
+      
+      <EmblaViewport ref={emblaRef}>
+        <EmblaContainer>
+          {cards.map((card, index) => (
+            <EmblaSlide key={index}>
+              <SlideInner $isSelected={index === selectedIndex}>
+                <StyledHomeCard
+                  image={card.image}
+                  rotate="0deg"
+                  label={card.label}
+                  onClick={() => navigate(card.path)}
+                  isActive={index === selectedIndex}
+                />
+              </SlideInner>
+            </EmblaSlide>
+          ))}
+        </EmblaContainer>
+      </EmblaViewport>
+      
+      <NextButton onClick={scrollNext} aria-label="Suivant">
+        <ChevronRightIcon />
+      </NextButton>
+    </CarouselContainer>
   );
 };
 

@@ -183,6 +183,9 @@ const LightEffect = styled.div`
       case 'Roulette':
         // Vert et rouge
         return 'radial-gradient(ellipse at 30% 50%, rgba(34, 197, 94, 0.6) 0%, transparent 50%), radial-gradient(ellipse at 70% 50%, rgba(239, 68, 68, 0.6) 0%, transparent 50%)';
+      case 'Dice Game':
+        // Rose et violet
+        return 'radial-gradient(ellipse at 30% 50%, rgba(255, 105, 180, 0.6) 0%, transparent 50%), radial-gradient(ellipse at 70% 50%, rgba(148, 0, 211, 0.6) 0%, transparent 50%)';
       default:
         return 'radial-gradient(ellipse, rgba(238, 108, 143, 0.4) 0%, rgba(238, 108, 143, 0.2) 40%, transparent 70%)';
     }
@@ -307,9 +310,6 @@ const MainContent = () => {
             clickable={cardsClickable}
           >
             <CardsWrapper 
-              setLogoSrc={setLogoSrc}
-              setShowBackgroundImage={setShowBackgroundImage}
-              currentCardIndex={currentCardIndex}
               onCardHover={setHoveredCardLabel}
             />
             {showNavbar && (

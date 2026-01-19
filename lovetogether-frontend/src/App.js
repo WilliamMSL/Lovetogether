@@ -5,6 +5,7 @@ import Generator from './components/Generator';
 import ActionVerite from './components/ActionVerite';
 import Roleplay from './components/Roleplay';
 import Roulette from './components/Roulette';
+import DiceGame from './components/DiceGame';
 import Layout from './components/Layout';
 import { CardProvider } from './components/CardContext';
 import { SettingsModalProvider } from './contexts/SettingsModalContext';
@@ -55,6 +56,7 @@ const ThemedApp = () => {
                     <Route path="/action-verite" element={<Layout><ActionVerite /></Layout>} />
                     <Route path="/roleplay" element={<Layout><Roleplay /></Layout>} />
                     <Route path="/roulette" element={<Layout><Roulette /></Layout>} />
+                    <Route path="/dice-game" element={<Layout><DiceGame /></Layout>} />
                   </Routes>
                 </Router>
               </ContentWrapper>

@@ -46,7 +46,7 @@ const HeaderButtonsContainer = styled.div`
   pointer-events: auto;
 `;
 
-const SettingsButtonWrapper = styled.div`
+const ButtonWrapper = styled.div`
   position: relative;
   display: flex;
   align-items: center;
@@ -87,13 +87,16 @@ const Tooltip = styled.div`
 const PageHeader = () => {
   const { openModal } = useSettingsModal();
   const { openUsersModal } = useUsersModal();
-  const { selectedToys } = useContext(UserContext);
+  const { selectedToys, players, firstName1, firstName2 } = useContext(UserContext);
   const navigate = useNavigate();
 
   const handleLogoClick = () => {
     navigate('/');
   };
 
+  // Vérifier si des joueurs sont ajoutés
+  const playersList = players && players.length > 0 ? players : [firstName1, firstName2].filter(Boolean);
+  const hasNoPlayers = playersList.length === 0;
   const hasNoToys = !selectedToys || selectedToys.length === 0;
 
   return (
@@ -103,21 +106,26 @@ const PageHeader = () => {
       </LogoContainer>
       <HeaderButtonsContainer>
         <ThemeToggleButton />
-        <HeaderButton 
-          icon={<UserIcon />} 
-          onClick={openUsersModal} 
-          aria-label="Joueurs"
-        />
-        <SettingsButtonWrapper>
+        <ButtonWrapper>
+          <HeaderButton 
+            icon={<UserIcon />} 
+            onClick={openUsersModal} 
+            aria-label="Joueurs"
+          />
+          <Tooltip show={hasNoPlayers}>
+            Ajouter des joueurs
+          </Tooltip>
+        </ButtonWrapper>
+        <ButtonWrapper>
           <HeaderButton 
             icon={<SlidersIcon />} 
             onClick={openModal} 
             aria-label="Paramètres"
           />
-          <Tooltip show={hasNoToys}>
+          <Tooltip show={!hasNoPlayers && hasNoToys}>
             Sélectionnez des jouets
           </Tooltip>
-        </SettingsButtonWrapper>
+        </ButtonWrapper>
       </HeaderButtonsContainer>
     </HeaderContainer>
   );

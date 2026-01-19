@@ -6,7 +6,11 @@ const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
 const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  logger.error('Supabase configuration missing. Please set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_ANON_KEY');
+  const errorMsg = 'Supabase configuration missing. Please set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_ANON_KEY';
+  logger.error(errorMsg);
+  console.error(errorMsg);
+  // Ne pas créer le client si les variables sont manquantes
+  throw new Error(errorMsg);
 }
 
 // Créer le client Supabase UNE SEULE FOIS

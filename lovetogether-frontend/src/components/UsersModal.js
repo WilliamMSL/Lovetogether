@@ -348,9 +348,9 @@ const UsersModal = () => {
 
   // Helper pour obtenir le genre d'un joueur
   const getPlayerGender = (player) => {
-    if (!player) return 'mixed';
-    if (typeof player === 'string') return 'mixed';
-    return player.gender || 'mixed';
+    if (!player) return 'female';
+    if (typeof player === 'string') return 'female';
+    return player.gender || 'female';
   };
 
   useEffect(() => {
@@ -366,16 +366,16 @@ const UsersModal = () => {
         }));
       } else if (firstName1 || firstName2) {
         if (firstName1 && firstName1.trim()) {
-          initialPlayers.push({ name: firstName1, gender: 'mixed' });
+          initialPlayers.push({ name: firstName1, gender: 'female' });
         }
         if (firstName2 && firstName2.trim()) {
-          initialPlayers.push({ name: firstName2, gender: 'mixed' });
+          initialPlayers.push({ name: firstName2, gender: 'male' });
         }
       }
       
       // S'assurer qu'il y a au moins un joueur vide si la liste est vide
       if (initialPlayers.length === 0) {
-        setLocalPlayers([{ name: '', gender: 'mixed' }]);
+        setLocalPlayers([{ name: '', gender: 'female' }]);
       } else {
         setLocalPlayers(initialPlayers);
       }
@@ -430,7 +430,7 @@ const UsersModal = () => {
       setError('Maximum 10 joueurs autorisés');
       return;
     }
-    const newPlayers = [...localPlayers, { name: '', gender: 'mixed' }];
+    const newPlayers = [...localPlayers, { name: '', gender: 'female' }];
     setLocalPlayers(newPlayers);
     setError('');
     // Ne pas sauvegarder automatiquement ici car le joueur est vide
@@ -478,10 +478,9 @@ const UsersModal = () => {
                 onChange={(e) => handlePlayerNameChange(index, e.target.value)}
               />
               <GenderSelect
-                value={player.gender || 'mixed'}
+                value={player.gender || 'female'}
                 onChange={(e) => handlePlayerGenderChange(index, e.target.value)}
               >
-                <option value="mixed">🔀 Mixte</option>
                 <option value="female">👩 Femme</option>
                 <option value="male">👨 Homme</option>
               </GenderSelect>

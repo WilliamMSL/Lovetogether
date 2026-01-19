@@ -348,7 +348,9 @@ const Roulette = () => {
   const emojis = ['🍒', '🎰', '🤗', '💋', '👄', '❤️', '💕', '🔥', '✨', '💖'];
   
   // Calculer le joueur actuel à partir de l'index (nom pour affichage)
-  const currentPlayer = players && players.length > 0 ? players[currentPlayerIndex] : (firstName1 || '');
+  const playersList = players && players.length > 0 ? players : [firstName1, firstName2].filter(Boolean);
+  const hasPlayers = playersList.length > 0;
+  const currentPlayer = hasPlayers ? playersList[currentPlayerIndex] : '';
   
   // Obtenir le genre du joueur actuel
   const currentPlayerData = playersWithGender && playersWithGender.length > 0 
@@ -789,9 +791,15 @@ const Roulette = () => {
       </WheelContainer>
       <ButtonContainer>
         <CombinedButton>
-          <Button onClick={() => { playButtonSound(); handleNextPlayer(); }}>
-            <span role="img" aria-label="Tour">👤</span> À ton tour, {currentPlayer}
-          </Button>
+          {hasPlayers ? (
+            <Button onClick={() => { playButtonSound(); handleNextPlayer(); }}>
+              <span role="img" aria-label="Tour">👤</span> À ton tour, {currentPlayer}
+            </Button>
+          ) : (
+            <Button onClick={() => { playButtonSound(); openUsersModal(); }}>
+              <span role="img" aria-label="Ajouter">➕</span> Ajouter un joueur
+            </Button>
+          )}
           <Divider />
           <Button onClick={() => { playButtonSound(); spin(); }} disabled={isSpinning}>
             {isSpinning ? 'En cours...' : 'Lancer'}

@@ -17,6 +17,7 @@ import { INTENSITY_LEVELS } from '../constants/intensityLevels';
 import { useSettingsModal } from '../contexts/SettingsModalContext';
 import { useUsersModal } from '../contexts/UsersModalContext';
 import { fetchRandomTruthOrDare } from '../lib/supabaseService';
+import { RedLightEffect, DarkRedLightEffect } from './LightEffects';
 
 // Mapper le genre vers le paramètre API
 // female → firstName1 (cartes pour femmes)
@@ -105,35 +106,6 @@ const ButtonContainer = styled.div`
   align-items: center;
 `;
 
-const RedLightEffect = styled.div`
-  position: absolute;
-  bottom: -150px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 800px;
-  height: 200px;
-  background: radial-gradient(circle, rgba(255, 0, 0, 0.6) 0%, rgba(255, 0, 0, 0.3) 40%, transparent 70%);
-  filter: blur(60px);
-  z-index: 4;
-  pointer-events: none;
-  opacity: ${props => props.show ? 1 : 0};
-  transition: opacity 0.5s ease;
-`;
-
-const DarkRedLightEffect = styled.div`
-  position: absolute;
-  bottom: -150px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 800px;
-  height: 200px;
-  background: radial-gradient(circle, rgba(200, 0, 0, 0.8) 0%, rgba(180, 0, 0, 0.5) 40%, transparent 70%);
-  filter: blur(60px);
-  z-index: 4;
-  pointer-events: none;
-  opacity: ${props => props.show ? 1 : 0};
-  transition: opacity 0.5s ease;
-`;
 
 const CombinedButton = styled.div`
   display: flex;
@@ -226,7 +198,9 @@ const ActionVerite = () => {
   const [currentToys, setCurrentToys] = useState([]);
   
   // Calculer le joueur actuel à partir de l'index (nom pour affichage)
-  const currentPlayer = players && players.length > 0 ? players[currentPlayerIndex] : (firstName1 || '');
+  const playersList = players && players.length > 0 ? players : [firstName1, firstName2].filter(Boolean);
+  const hasPlayers = playersList.length > 0;
+  const currentPlayer = hasPlayers ? playersList[currentPlayerIndex] : '';
   
   // Obtenir le genre du joueur actuel
   const currentPlayerData = playersWithGender && playersWithGender.length > 0 
@@ -420,15 +394,21 @@ const ActionVerite = () => {
 
       <TimerRectangle ref={timerRectangleRef} />
 
-      <RedLightEffect show={intensityProgression.intensity === INTENSITY_LEVELS.MEDIUM} />
-      <DarkRedLightEffect show={intensityProgression.intensity === INTENSITY_LEVELS.HIGH} />
+      <RedLightEffect $show={intensityProgression.intensity === INTENSITY_LEVELS.MEDIUM} />
+      <DarkRedLightEffect $show={intensityProgression.intensity === INTENSITY_LEVELS.HIGH} />
 
       <ButtonContainer>
         {!clickedCard && (
           <CombinedButton>
-            <Button disabled>
-              <span role="img" aria-label="Tour">👤</span> À ton tour, {currentPlayer}
-            </Button>
+            {hasPlayers ? (
+              <Button disabled>
+                <span role="img" aria-label="Tour">👤</span> À ton tour, {currentPlayer}
+              </Button>
+            ) : (
+              <Button onClick={() => { playButtonSound(); openUsersModal(); }}>
+                <span role="img" aria-label="Ajouter">➕</span> Ajouter un joueur
+              </Button>
+            )}
             <Divider />
             <Button onClick={() => { playButtonSound(); intensityProgression.cycleIntensity(); }}>
               Intensité ｜ {intensityProgression.currentConfig.label}
